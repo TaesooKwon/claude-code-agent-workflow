@@ -1,5 +1,7 @@
 # claude-code-agent-workflow
 
+[![test](https://github.com/TaesooKwon/claude-code-agent-workflow/actions/workflows/test.yml/badge.svg)](https://github.com/TaesooKwon/claude-code-agent-workflow/actions/workflows/test.yml)
+
 **Claude Code 에이전트를 "규약 → 훅 → 게이트"로 통제하는 개인 워크플로우 킷.**
 
 레거시 eGovFrame/Spring + Maven 프로젝트에서 AI 코딩 에이전트를 실무에 쓰며 만든 규약(`CLAUDE.md`)·훅·커밋 게이트·폐쇄형 학습 루프·프로젝트 스캐폴드를 한 레포에 담았다. 새 머신에서도 몇 커맨드로 같은 환경을 재현한다.

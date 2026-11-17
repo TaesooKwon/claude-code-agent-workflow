@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=차단 · 도구부재=통과
 # Convention gate (Stop hook) — F3(2026-06-26 하네스 #3).
 # #1에서 만든 컨벤션 lint(check_conventions.py)를 "수동 harness"에서 "세션 종료 시 자동 차단"으로
 # 끌어올린다. Stop 시 변경분을 --changed-only 로 검사해 위반이면 block(종료 전 수정 유도).

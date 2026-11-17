@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=차단 · 도구부재=통과
 # Stop hook: docs/agent_history.md 로테이션 반자동화.
 # 40KB(=40960B) 초과 시 ①오늘자 전체 백업을 자동 생성(멱등) ②트림하라는 경고로 stop 을 1회 block.
 # 자동 트림은 하지 않는다 — 활성/미커밋 항목 보존 판단이 필요하므로 에이전트가 판단해 트림한다.

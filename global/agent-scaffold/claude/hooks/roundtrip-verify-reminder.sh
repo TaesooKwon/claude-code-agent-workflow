@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=안내 · 도구부재=통과
 # PreToolUse(Bash) — 다층 관통 변경에 '실물 왕복 검증'을 상기시키는 **경고형** 리마인더(차단하지 않는다).
 #
 # ⚠️ 이식 사본 — 부트스트랩 재추출 필수: 아래 FILE_REGEX·CONTENT_REGEX 와 안내 문구의 왕복 계약을

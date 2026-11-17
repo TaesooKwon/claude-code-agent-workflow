@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=기록 · 도구부재=통과
 # PostToolUse·PostToolUseFailure(Bash) 기록기 — CLAUDE.md 🧪검증 "화면 JS 로직(js/develop/**)을 바꾸면 jsharness 스펙 + 변이 반증 1회,
 # Tests run: N 을 보고(0건 = 미실행)"의 기계화 전반부. 짝 = jsharness-commit-reminder.sh(PreToolUse 경고).
 # 구조는 mvn-test-record.sh 와 같다(판정 재료 = stdin JSON 만, 이 레포에서만 기록, 원자적 교체).

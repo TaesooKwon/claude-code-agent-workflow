@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=안내 · 도구부재=통과
 # SessionStart(compact) 상태 재주입 — 컨텍스트 압축 뒤 요약에서 빠질 수 있는 커밋 게이트 "상태"를
 # 기록 파일에서 결정론적으로 다시 읽어 평문 stdout 으로 넣는다(exit 0 stdout = 컨텍스트 주입).
 # 규칙 재서술이 아니다 — CLAUDE.md 는 압축 뒤에도 재로드된다. 여기는 기록값만 옮긴다.

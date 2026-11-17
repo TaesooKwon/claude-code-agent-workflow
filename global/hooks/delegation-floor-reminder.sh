@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=안내 · 도구부재=통과
 # PreToolUse(Agent|Workflow) 소프트 리마인더 — "위임·워크플로 프롬프트엔 하한선 5항목을 라벨째 전사,
 # 무의미하면 'N/A' 명시 — 침묵 누락 금지" 규칙의 기계화. 차단하지 않는다(그림자 기간 — 경고만).
 #   - 판정 대상 텍스트: Agent = .tool_input.prompt / Workflow = .tool_input.script(인라인),

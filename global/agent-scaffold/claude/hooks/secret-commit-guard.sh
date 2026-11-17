@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=차단 · 도구부재=차단
 # 커밋 내용 게이트(층 A — 호출부 조회 = `grep -n 'GATES=' .claude/hooks/git/pre-commit`) — "민감정보 비노출" 규칙의 커밋 시점 강제화. (agent-scaffold 범용판)
 # git commit 시 스테이징 diff의 '추가된 줄(+)'에서 시크릿 패턴(토큰·개인키·URL내 계정·비밀번호 대입)을
 # 스캔해 발견 시 커밋을 deny 로 차단한다.

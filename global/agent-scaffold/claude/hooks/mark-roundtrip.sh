@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=보조 · 도구부재=-
 # audit: unregistered-ok — 훅 이벤트에 걸지 않고 에이전트가 직접 호출하는 CLI(게이트 훅의 통과 마커를 찍는다).
 # 다층 관통 변경의 '실물 왕복 검증' 완료 마커 — roundtrip-verify-reminder.sh 리마인더의 통과 조건.
 # 사용: bash .claude/hooks/mark-roundtrip.sh          (왕복 E2E 를 실제로 돌린 직후)

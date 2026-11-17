@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=차단 · 도구부재=차단
 # PreToolUse(Bash) — 층 A(git 훅) 미설치·무효 프로젝트의 에이전트 커밋을 막는 fail-closed 보조 가드. 우회 변수 없음.
 #   커밋 내용 게이트는 층 A 의 pre-commit 디스패처가 부르는 역할이다(조회 = `grep -n 'GATES=' .claude/hooks/git/pre-commit`)
 #   → 층 A 가 없으면 에이전트 커밋은 게이트 없이 통과한다. 이 가드가 막는 것 = 그 '설치 누락'. 커밋 내용은 보지 않는다(권위 = 층 A).

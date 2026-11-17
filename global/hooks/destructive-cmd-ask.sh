@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=확인 · 도구부재=통과
 # PreToolUse(Bash · 운영 DB MCP) 전역 훅 — 워킹트리·운영 DB 를 건드리는 호출에 사용자 확인(permissionDecision "ask")을 강제한다.
 #   settings 의 permissions.ask 는 auto 모드에서 확인창을 띄우지 않았다(2026-10-10 실측 1회) → 훅이 직접 ask 를 반환한다.
 #   대상: git checkout -- / . / -f · git restore(인덱스만 되돌리는 --staged/-S 단독 외 전부) · git reset --hard/--merge/--keep(위치 무관) ·

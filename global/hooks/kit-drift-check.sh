@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=안내 · 도구부재=통과
 # SessionStart 전역 훅 — 현재 레포의 .claude/hooks·.claude/workflows 를 킷(~/.claude/agent-scaffold/claude/…)과 대조해
 # 드리프트를 보고하고 "지연 전파" 판정을 제안한다(경고형). 설정값 줄(VAR=)·# 주석은 비교에서 제외해
 # 레포별 값 차이는 드리프트로 세지 않는다. 레포·일자당 1회 발화.

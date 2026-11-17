@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=차단 · 도구부재=통과
 # PreToolUse(Bash) 가드 — 층 A(git 훅: .claude/hooks/git/*)를 건너뛰거나 끄는 낱말을 막는다. 우회 변수 없음.
 #   층 A 는 git 이 실행하는 훅이라 명령 형태와 무관하게 돌지만, 아래 형태는 훅 자체를 안 돌게 한다:
 #     --no-verify(--no-veri… 축약 포함)·`git commit -n`(짧은 형태, 묶음 -nm 포함) · core.hooksPath(대소문자 무시) ·

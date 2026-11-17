@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=안내 · 도구부재=통과
 # PreToolUse(Write|Edit) 소프트 리마인더 — 멀티모듈 격리 위반 경고.
 # CLAUDE.md 아키텍처: DB제어(mapper/entity/service impl)는 {{MODULE_CORE}}에만, web 모듈
 # ({{MODULE_ADMIN}}/{{MODULE_FRONT}})은 컨트롤러 레이어만. 컨트롤러는 Mapper 직접호출 금지(Service 경유).

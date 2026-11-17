@@ -1,4 +1,5 @@
 #!/bin/bash
+# hook-policy: 강제=안내 · 도구부재=통과
 # hook-events-retention.sh — SessionStart 훅. hook-obs.sh 가 쌓는 월별 관측 로그(hook-events/YYYY-MM.jsonl)의 보존 회전.
 #   - 발동: 그날 첫 세션 1회. 하루 마커 = 로그 디렉터리 안 `.retention-YYYYMMDD` 디렉터리를 mkdir 로 원자 획득 —
 #     병행 세션이 같은 날 동시에 떠도 mkdir 에 성공한 하나만 진행한다. 지난 날짜 마커는 rmdir 로 정리.
@@ -7,7 +8,8 @@
 #     이번 달 파일은 보존 개월 계산과 별개로 한 번 더 제외한다.
 #   - 미발동: 디렉터리 없음 / 오늘 마커가 이미 있음.
 #   - 보존 개월: 1~4자리 숫자이고 1 이상일 때만 인정, 그 밖은 2.
-#   - 출력: 삭제했을 때만 개수 한 줄(로그 내용·파일명은 내지 않는다). 항상 exit 0.
+#   - 출력: 삭제했을 때만 개수 한 줄(로그 내용·파일명은 내지 않는다) + 지난달 이전 로그가 남아 있으면 달마다 1회
+#     훅 은퇴 점검 알림 한 줄(월 마커 `.retire-remind-YYYYMM`). 항상 exit 0.
 # 테스트용 덮어쓰기: HOOK_EVENTS_DIR(기본 $HOME/.claude/hook-events).
 # ponytail: 월 단위 회전이라 한 달 파일이 커지는 건 못 막는다(현재 하루 수십 MB 가능) /
 #           업그레이드 경로 = hook-obs 쪽 일 단위 파일 + 여기서 일 단위 보존.
@@ -43,8 +45,22 @@ for f in "$dir"/*.jsonl; do
   idx=$(( 10#${BASH_REMATCH[1]} * 12 + 10#${BASH_REMATCH[2]} - 1 ))
   if [ "$idx" -le $(( cur - keep )) ]; then
     rm -f -- "$f" 2>/dev/null && deleted=$((deleted + 1))
+  else
+    older=1
   fi
 done
 
 [ "$deleted" -gt 0 ] && echo "[hook-events-retention] 오래된 월 로그 ${deleted}개 삭제(보존 ${keep}개월)"
+
+# 월간 훅 은퇴 점검 알림 — 지난달 이전 로그가 남아 있을 때(한 달 치 이상 관측)만, 달마다 1회.
+# 월 마커 `.retire-remind-YYYYMM` 도 mkdir 원자 획득이라 병행 세션 중 하나만 알린다. 지난 달 마커는 정리.
+if [ "${older:-0}" = 1 ] && mkdir "$dir/.retire-remind-$y$m" 2>/dev/null; then
+  for mk in "$dir"/.retire-remind-*; do
+    [ -d "$mk" ] && [ ! -L "$mk" ] || continue
+    name=${mk##*/}
+    [ "$name" = ".retire-remind-$y$m" ] && continue
+    [[ "$name" =~ ^\.retire-remind-[0-9]{6}$ ]] && rmdir "$mk" 2>/dev/null
+  done
+  echo "[훅 은퇴 점검] 월 1회 — bash ~/.claude/skills/agent-audit/scripts/hook-obs-report.sh 30 의 「은퇴 후보」를 사용자에게 후보로만 제시한다(처분은 사용자 · 안전 가드는 0건이 정상)."
+fi
 exit 0

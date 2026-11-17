@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=차단 · 도구부재=통과
 # PreToolUse(Bash) 가드 — 병행 세션이 워킹트리·인덱스를 공유하는 레포에서 <b>일괄 스테이징</b>을 차단한다.
 #   차단: git add -A / --all / -u / --update / . / :/  ,  git commit -a / --all(-am 등 묶음 플래그 포함)
 #   통과: git add <명시 경로…>(파일·디렉터리), git add -p/-f <경로>, git commit --amend, 비 git 명령

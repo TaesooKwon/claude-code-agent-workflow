@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=안내 · 도구부재=통과
 # PreToolUse(Bash) 소프트 리마인더 — "Java 심볼 탐색은 LSP 우선(grep보다)" 규칙(CLAUDE.md 🔌MCP)의 보강.
 # grep/rg 가 **.java 로만** 스코프되고 "검색 패턴 인자"가 **심볼 모양**일 때만 비차단 리마인더(additionalContext)를
 # 주입한다. 차단하지 않는다(방법론 넛지, 안전critical 아님).

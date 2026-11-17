@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=차단 · 도구부재=차단
 # 커밋 내용 게이트(층 A — 호출부 조회 = `grep -n 'GATES=' .claude/hooks/git/pre-commit`) — "커밋 전 코드리뷰" 게이트(**diff 지문 대조형**, 2026-08-05 강화).
 #
 # 통과 조건: `.claude/.last-review` 에 기록된 지문이 **지금 커밋될 diff 의 지문과 일치**할 때만.

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=차단 · 도구부재=통과
 # PreToolUse(Bash) 가드 — 검증 명령을 **옛 코드가 떠 있는 앱**에 대고 돌리려 할 때 차단한다.
 # 2026-09-17 경고형(additionalContext) → 차단형(deny) 승격. 근거 = docs/agent-forensics-20260910/apply/PLAN.md
 # 처분 hook:PreToolUse-Bash:8(표본 3회 실측, 아래 ①②③). 판정축은 승격 전과 동일(변경 없음).

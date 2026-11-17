@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=안내 · 도구부재=통과
 # PostToolUse(Write|Edit) 전역 훅 — 에이전트 세팅 층(규약·훅·settings·킷·스킬·워크플로)을 편집하면
 # "이 변경은 어느 층 몫인가 + 전파는 어떤 모드인가"를 additionalContext 로 상기시켜 에이전트가
 # 먼저 방향을 제안하게 한다. 경고형(차단 없음). 같은 세션·같은 층은 1회만 발화(마커).

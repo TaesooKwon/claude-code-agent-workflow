@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=안내 · 도구부재=통과
 # PreToolUse(Bash) 넛지 — 커밋 직전 staged diff 로 리뷰 티어(A/B)와 소형 A 후보를 계산해 보여준다.
 # 근거 처분: global:비동기검증:10(검증 무게는 diff 성격에 비례) + project:검증:17(티어 판정축) — 훅승격 통합 1개.
 #

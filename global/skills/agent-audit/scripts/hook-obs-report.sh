@@ -1,7 +1,8 @@
 #!/bin/bash
 # hook-obs-report.sh — hook-obs.sh 가 남긴 ~/.claude/hook-events/*.jsonl 집계.
 # 사용: hook-obs-report.sh [일수=30]
-#   (hook,event) 별 건수·action 분포·평균/최대 ms·seat 분포 / 기간 내 block·warn 0 인 (hook,event) / killed·error 목록
+#   (hook,event) 별 건수·action 분포·평균/최대 ms·seat 분포 / 은퇴 후보(기간 내 block·ask·warn 0 이고 정책 강제≠기록·보조 —
+#   정책은 hook-policy-report.sh --tsv 로 읽는다) / killed·error 목록
 # jq 만 사용. 깨진 줄(부분 쓰기 등)은 건너뛰고 건수를 보고한다.
 
 days=${1:-30}
@@ -25,6 +26,14 @@ for f in "$LD"/*.jsonl; do
   files+=("$f")
 done
 [ "${#files[@]}" -gt 0 ] || files=(/dev/null)   # 인자 없는 cat 이 stdin 을 기다리지 않게
+# 훅별 정책(강제 수준) — 정본 파서 = 같은 폴더 hook-policy-report.sh. 은퇴 후보에서 기록·보조(원래 걸지 않는 훅)를 뺀다.
+# 관측 로그는 레포 구분 없이 한 파일에 쌓이므로, 실행한 레포에 없는 스캐폴드 훅도 정책을 알도록
+# 전역 훅·설치된 스캐폴드 원본·현재 프로젝트 훅을 함께 읽는다.
+pdirs=("$HOME/.claude/hooks" "$HOME/.claude/agent-scaffold/claude/hooks")
+proj=${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}
+[ -d "$proj/.claude/hooks" ] && pdirs+=("$proj/.claude/hooks")
+pol=$(bash "$(dirname "$0")/hook-policy-report.sh" --tsv "${pdirs[@]}" 2>/dev/null | jq -Rn '[inputs | split("\t") | select(length >= 2) | {(.[0]): .[1]}] | add // {}' 2>/dev/null)
+[ -n "$pol" ] || pol='{}'
 
 cat "${files[@]}" | jq -Rc --argjson since "$since" '
   # ts = 로컬시각+오프셋(+0900) — strptime 은 UTC 로 읽으므로 오프셋만큼 되돌린다.
@@ -35,7 +44,7 @@ cat "${files[@]}" | jq -Rc --argjson since "$since" '
     elif type == "object" and ((.ts | epoch) // 0) >= $since
       then {ts, hook, event, action, duration_ms, seat, exit_code, session}
     else empty end
-' | jq -nr '
+' | jq -nr --argjson pol "$pol" '
   [inputs] as $all
   | ($all | map(select(. == "BAD")) | length) as $bad
   | ($all | map(select(type == "object"))) as $ev
@@ -47,9 +56,12 @@ cat "${files[@]}" | jq -Rc --argjson since "$since" '
       | (map(.duration_ms | numbers)) as $ms
       | "\(.[0].hook)\t\(.[0].event // "-")\t\(length)\t\(dist(.action))\tavg=\(if ($ms | length) > 0 then ($ms | add / length | round) else "-" end) max=\($ms | max // "-")\t\(dist(.seat))"),
     "",
-    "--- block·warn 0 건인 (hook, event) — 발동은 했으나 한 번도 걸지 않음(검토 대상 — 드문 사고를 막는 가드는 0건이 정상, 폐기 근거 아님) ---",
-    ($ev | group_by([.hook, .event]) | map(select(all(.[]; .action != "block" and .action != "warn")))
-      | if length == 0 then "(없음)" else .[] | "\(.[0].hook)\t\(.[0].event // "-")\t\(length)건" end),
+    "--- 은퇴 후보: block·ask·warn 0 건인 (hook, event) — 발동은 했으나 한 번도 걸지 않음(검토 대상 — 드문 사고를 막는 가드는 0건이 정상, 폐기 근거 아님) ---",
+    "    정책 강제=기록·보조 훅은 원래 걸지 않으므로 뺀다 · 강제 칸 \"?\" = 설치본에 정책 줄 없음(hook-policy-report.sh --missing)",
+    ($ev | group_by([.hook, .event])
+      | map(select(all(.[]; .action != "block" and .action != "warn" and .action != "ask"))
+            | select(($pol[.[0].hook] // "?") as $k | $k != "기록" and $k != "보조"))
+      | if length == 0 then "(없음)" else .[] | "\(.[0].hook)\t\(.[0].event // "-")\t\(length)건\t강제=\($pol[.[0].hook] // "?")" end),
     "",
     "--- killed / error ---",
     ($ev | map(select(.action == "killed" or .action == "error"))

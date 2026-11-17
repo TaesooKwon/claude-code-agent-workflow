@@ -158,6 +158,14 @@ if command -v jq >/dev/null 2>&1; then
   [ "$umiss" = 0 ] && ok "훅 파일 ${utotal}개 전부 등록됨(의도적 미등록 표식 ${uok}개)"
 else warn "jq 없음 — 역방향 등록 점검 스킵"; fi
 
+echo "--- [D3] 훅 정책 줄(강제 수준·도구 부재 시 동작) ---"
+# 정책 줄이 없으면 은퇴 후보 리포트(hook-obs-report.sh)가 기록용 훅을 걸러내지 못한다. 경고만 —
+# 킷에서 줄을 더한 뒤 bootstrap-machine.sh 재설치 전까지는 설치본에 줄이 없는 게 정상이라서.
+pdirs=("$HOME/.claude/hooks"); [ -d "$proj/.claude/hooks" ] && pdirs+=("$proj/.claude/hooks")
+pm=$(bash "$(dirname "$0")/hook-policy-report.sh" --missing "${pdirs[@]}")
+if [ -n "$pm" ]; then warn "정책 줄 없음·형식 오류 $(printf '%s\n' "$pm" | grep -c .)개 — 표·목록 = hook-policy-report.sh (킷 갱신분이면 bootstrap 재설치)"
+else ok "훅 정책 줄 전부 있음"; fi
+
 pmiss=0; ptotal=0
 _ptr() { sed 's/`[^`]*`//g' "$1" | grep -oE '\[\[[^]]+\]\]' | tr -d '[]' | sort -u; }
 MEMD="$HOME/.claude/projects/$(printf '%s' "$proj" | sed 's|/|-|g')/memory"

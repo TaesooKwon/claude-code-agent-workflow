@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=안내 · 도구부재=통과
 # PostToolUse(Write|Edit) 전역 훅 — 편집 파일이 <모듈>/src/main/<상대경로> 형태이고 같은 레포의
 # 다른 최상위 모듈에 동일 상대경로 파일이 있으면(예: CMS-Admin↔CMS-Front) "복제본 존재" 를 1줄 상기.
 #

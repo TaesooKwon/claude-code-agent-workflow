@@ -1,4 +1,5 @@
 #!/bin/bash
+# hook-policy: 강제=보조 · 도구부재=-
 # hook-obs.sh — 훅 공통 관측 래퍼. 원 훅을 그대로 실행해 rc·stdout·stderr 바이트를 보존하고,
 # ~/.claude/hook-events/YYYY-MM.jsonl 에 판정 1줄을 남긴다. 계약 = hook-obs 명세 v2(2026-10-07).
 # 등록 형태(래퍼가 없거나 문법 오류면 원 훅이 그대로 돈다 — fail-open 방지):

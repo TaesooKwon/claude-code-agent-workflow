@@ -14,7 +14,7 @@ bash ~/.claude/skills/agent-audit/scripts/audit.sh            # 현재 프로젝
 bash ~/.claude/skills/agent-audit/scripts/audit.sh --fast     # 킷 doctor·test-hooks 스킵(프로젝트층만)
 ```
 
-포함: ①머신층 = 킷 `doctor.sh`(의존·훅 등록·드리프트) ②훅 동작 = 킷 `test-hooks.sh`(판정 로직 회귀) ③memory = `memory-hygiene scan.sh`(stale·죽은링크·pending) ④프로젝트층 = settings 등록 훅 파일 실존, conventions.enabled, git exclude 격리(AI 스캐폴딩이 tracked/미격리인지), 플러그인 이중발동(전역 on + 로컬 훅 존재 + local off 부재 — 훅 비중복을 판독한 플러그인은 `plugin-hooks-ok.txt` 에 hooks.json 해시로 면제). ⑤처분 도달 대장 = 훅 파일 → settings 등록 역방향(의도적 미등록은 헤더 `# audit: unregistered-ok — 사유`) + 전역·프로젝트 규약 `[[포인터]]` 정본 실존.
+포함: ①머신층 = 킷 `doctor.sh`(의존·훅 등록·드리프트) ②훅 동작 = 킷 `test-hooks.sh`(판정 로직 회귀) ③memory = `memory-hygiene scan.sh`(stale·죽은링크·pending) ④프로젝트층 = settings 등록 훅 파일 실존, conventions.enabled, git exclude 격리(AI 스캐폴딩이 tracked/미격리인지), 플러그인 이중발동(전역 on + 로컬 훅 존재 + local off 부재 — 훅 비중복을 판독한 플러그인은 `plugin-hooks-ok.txt` 에 hooks.json 해시로 면제). ⑤처분 도달 대장 = 훅 파일 → settings 등록 역방향(의도적 미등록은 헤더 `# audit: unregistered-ok — 사유`) + 전역·프로젝트 규약 `[[포인터]]` 정본 실존. ⑥훅 정책 줄 = 훅마다 셔뱅 다음 줄 `# hook-policy: 강제=<차단|확인|안내|기록|보조> · 도구부재=<차단|통과|->`(형식 정본 = `scripts/hook-policy-report.sh` 머리) — 없으면 경고. 표는 `scripts/hook-policy-report.sh`. **새 훅을 만들면 이 줄을 같은 편집에서 단다.**
 
 ## 2. 판단 체크리스트 (스크립트가 못 보는 것)
 
@@ -24,7 +24,7 @@ bash ~/.claude/skills/agent-audit/scripts/audit.sh --fast     # 킷 doctor·test
 - **memory 처분:** scan 리포트의 stale 마커·pending을 memory-hygiene SKILL §2 기준으로 처분.
 - **킷 미반영 자산:** 이번 감사에서 정착시킨 범용 자산의 킷 반영 여부(반영 시 스크럽·grep 감사 → 커밋+푸시).
 - **훅 로그 건강:** `~/.claude/hooks/*.log` tail로 BLOCK/PASS가 실제 찍히는지(죽은 훅 탐지).
-- **저발동 스킬·무발화 훅:** `scripts/skill-usage-report.sh [일수]`(호출 0 스킬) + `hook-obs-report.sh`(block·warn 0 훅) → description 보강·은퇴 **후보로 제시만**(처분은 사용자). 안전 가드(운영 DB·푸시·시크릿)는 발동 0이어도 제외.
+- **저발동 스킬·무발화 훅:** `scripts/skill-usage-report.sh [일수]`(호출 0 스킬) + `hook-obs-report.sh`(「은퇴 후보」 = block·ask·warn 0 이고 정책 강제≠기록·보조) → description 보강·은퇴 **후보로 제시만**(처분은 사용자). 월 1회는 `hook-events-retention.sh` 가 세션 시작에 상기한다. 안전 가드(운영 DB·푸시·시크릿)는 발동 0이어도 제외.
 
 ## 3. 마무리
 

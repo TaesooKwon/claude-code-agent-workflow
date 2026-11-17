@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=차단 · 도구부재=차단
 # 커밋 내용 게이트(층 A) — 전역 CLAUDE.md "쓰기 전에 신규인지 확인하라"(Write 덮어쓰기) 조항의 강제화.
 #   역할 = 층 A pre-commit 디스패처가 합성 PreToolUse 꼴 stdin 으로 부르는 게이트(호출부 조회 = `grep -n 'GATES=' .claude/hooks/git/pre-commit`).
 # git commit 시점에 스테이징된 테스트 파일의 **테스트 메서드 수가 HEAD 대비 줄었는지** 검사해 차단한다.

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=기록 · 도구부재=통과
 # PostToolUse(Write|Edit): 폐쇄형 루프의 두 저장소를 개인 백업으로 미러링한다.
 #   (a) docs/agent_history.md (레거시 작업로그)
 #   (b) 이 프로젝트의 Claude native memory 디렉터리(현 1차 지식 저장소)

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=차단 · 도구부재=차단
 # PreToolUse(Bash) 가드 — "운영 DB 절대 금지(쓰기·DDL)" 규칙의 강제화. (agent-scaffold 범용판)
 # Bash 에서 DB 접속을 '직접 여는' 명령을 막는다. 두 층으로 판정한다.
 #   ⑴ 허용 형태 판정기(lib/cmdform.py db — 규칙 정본은 그 파일의 judge_db):

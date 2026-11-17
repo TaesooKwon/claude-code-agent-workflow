@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=안내 · 도구부재=통과
 # SessionStart — 월 1회 memory 위생 스윕 리마인더(memory-hygiene 스킬 실행 권장 주입).
 # 배경: stale 진행표시 방치가 후속 세션 오독 유발(CLAUDE.md "완료 기록 = 회수 동반").
 #       수동 스윕 3회 반복(0702·0710·0716) → 승격사다리 적용(경험→교훈→절차): 스킬+리마인더로 정례화.

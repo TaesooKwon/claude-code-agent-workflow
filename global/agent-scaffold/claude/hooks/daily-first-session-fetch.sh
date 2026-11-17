@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=안내 · 도구부재=통과
 # SessionStart — 그날 첫 세션에서 팀 커밋 유입 감지(CLAUDE.md "pull 후 스모크" 보완). (agent-scaffold 범용판)
 # 배경: pull-smoke-reminder(PostToolUse)는 세션 안에서 pull했을 때만 발동 → 밤새 쌓인
 #       팀 커밋으로 main이 깨진 걸 뒤늦게 발견하는 구멍. 고정 시각 크론은 머신 상시

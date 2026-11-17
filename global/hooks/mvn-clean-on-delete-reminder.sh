@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=안내 · 도구부재=통과
 # PreToolUse(Bash) 소프트 리마인더 — 소스 삭제 후 증분 mvn 빌드 시 stale target 경고.
 # 삭제한 .java/.xml 이 target/classes 에 잔존 → 런타임 ClassNotFound/매퍼 파싱실패
 # (컴파일은 SUCCESS로 통과해 조용히 터짐). 실측 사례: MbrInfoMapper_sql.xml 삭제 후

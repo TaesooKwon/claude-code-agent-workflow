@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=차단 · 도구부재=차단
 # 커밋 내용 게이트(층 A) — CLAUDE.md "SQL 커밋 금지"(untracked .sql 초안 스테이징 금지) 규칙의 강제화.
 # git commit 시점에 인덱스를 검사해 '신규 추가(A)·복사(C)·이름 변경(R) — 새 경로가 생기는 상태' .sql 이 있으면 커밋을 deny 로 차단한다.
 #   - A·C·R 만 대상(새 경로가 생기는 상태 전부 — 복사 감지 설정이면 C 로 나온다) → 팀이 이미 tracked 로 관리하는 정본 덤프(project_dump_*.sql 등) 수정(M)은 통과(예외).

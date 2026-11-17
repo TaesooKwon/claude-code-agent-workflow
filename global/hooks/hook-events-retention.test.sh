@@ -91,6 +91,23 @@ echo "== 입력 방어 =="
 go "$T/nope" env
 [ "$RC" -eq 0 ] && [ -z "$OUT" ] && ok "T14 디렉터리 없음 → 무출력·exit 0" || fail "T14 디렉터리 없음 → 무출력·exit 0" "rc=$RC [$OUT]"
 
+echo "== 월간 훅 은퇴 점검 알림 =="
+cm=$(date +%Y%m)
+d=$(newdir t15 "$M1" "$M0"); mkdir "$d/.retire-remind-200001" "$d/.retire-remind-keepme"; go "$d" env
+case "$OUT" in *'훅 은퇴 점검'*) ok "T15 지난달 로그 있음 → 알림 1줄" ;; *) fail "T15 지난달 로그 있음 → 알림 1줄" "[$OUT]" ;; esac
+[ -d "$d/.retire-remind-$cm" ] && [ ! -e "$d/.retire-remind-200001" ] && [ -d "$d/.retire-remind-keepme" ] \
+  && ok "T15-마커: 이번 달 생성·지난 달 정리·다른 이름 보존" || fail "T15-마커: 이번 달 생성·지난 달 정리·다른 이름 보존" "$(ls -a "$d" | tr '\n' ' ')"
+rm -rf "$d"/.retention-*; go "$d" env
+case "$OUT" in *'훅 은퇴 점검'*) fail "T16 같은 달 다른 날 → 다시 알리지 않음" "[$OUT]" ;; *) ok "T16 같은 달 다른 날 → 다시 알리지 않음" ;; esac
+d=$(newdir t17 "$M0"); go "$d" env
+case "$OUT" in *'훅 은퇴 점검'*) fail "T17 이번 달 로그만 → 알림 없음" "[$OUT]" ;; *) ok "T17 이번 달 로그만 → 알림 없음" ;; esac
+d=$(newdir t18 "$M3" "$M0"); go "$d" env
+case "$OUT" in *'훅 은퇴 점검'*) fail "T18 오래된 로그가 전부 삭제됨 → 알림 없음" "[$OUT]" ;; *) ok "T18 오래된 로그가 전부 삭제됨 → 알림 없음" ;; esac
+d=$(newdir t19 "$M1" "$M0")
+for i in 1 2 3 4 5 6; do (HOOK_EVENTS_DIR="$d" bash "$RET" > "$T/t19-$i.out" 2>&1) & done; wait
+lines=$(cat "$T"/t19-*.out | grep -c '훅 은퇴 점검')
+[ "$lines" -eq 1 ] && ok "T19 병행 6개 동시 실행 → 알림 한 번" || fail "T19 병행 6개 동시 실행 → 알림 한 번" "알림 줄 $lines"
+
 echo
 echo "Tests run: $run, Passed: $pass"
 [ "$run" -eq "$pass" ] || exit 1

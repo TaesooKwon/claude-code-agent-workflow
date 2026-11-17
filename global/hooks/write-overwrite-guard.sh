@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=차단 · 도구부재=통과
 # PreToolUse(Write) 가드 — 전역 CLAUDE.md 「편집 안전」 "쓰기 전에 신규인지 확인하라(Write 는 통째로
 # 갈아엎는다)" 조항의 강제화. 근거 처분 id = global:편집안전:4.
 #

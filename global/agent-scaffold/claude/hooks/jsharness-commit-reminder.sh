@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=안내 · 도구부재=통과
 # PreToolUse(Bash) 경고 — CLAUDE.md 🧪검증 "화면 JS 로직(개발 소유 JS)을 바꾸면 jsharness 스펙 + 변이 반증 1회,
 # Tests run: N 을 보고(0건 = 미실행)"의 기계화 후반부. 짝 = jsharness-record.sh(PostToolUse·PostToolUseFailure 기록기)가 남기는
 # .claude/.last-jsharness("<epoch> <N> <F>"). 구조는 mvn-test-result-gate.sh 와 같고, **경고만 한다**(그림자 기간 —

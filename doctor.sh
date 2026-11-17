@@ -49,6 +49,12 @@ drift="$(grep -rhoE --exclude='*.log' --exclude='*.test.sh' "(/Users|/home)/[^/\
 # $HOME 자체(예 /Users/me)로 시작하는 경로는 정상 → 그 접두를 가진 라인 제거 후 남는 게 있으면 드리프트.
 drift="$(printf '%s\n' "$drift" | grep -vE "^${HOME}(/|$)" | grep -E '.' || true)"
 if [ -n "$drift" ]; then warn "훅/settings 내용에 현재 홈($HOME)과 다른 절대경로 잔존: $(printf '%s' "$drift" | tr '\n' ' ') — 재-bootstrap 필요"; else ok "홈 경로 정합"; fi
+# 머신 토큰 잔존 — 치환이 빠진 설치본은 경로가 `__HOME__/…` 로 남아 훅·스킬이 조용히 무기능이 된다.
+# 토큰 목록 = bootstrap-machine.sh 의 sed 치환 대상(허용 목록 — 새 토큰을 더하면 여기도 더한다).
+# 테스트(*.test.sh)는 토큰을 픽스처로 일부러 쓰므로 뺀다. 백업(.bak-*)·로그도 뺀다.
+tok="$(grep -rlE --exclude='*.test.sh' --exclude='*.bak*' --exclude='*.log' '__(HOME|PROJECTS_DIR|STRICT_PROJECT|MAVEN_REPO|AGENT_REPOS|NTFY_TOPIC)__' \
+  "$DEST/hooks" "$DEST/skills" "$DEST/agent-scaffold" "$DEST/agents" "$DEST/CLAUDE.md" "$DEST/settings.json" 2>/dev/null || true)"
+if [ -n "$tok" ]; then warn "미치환 머신 토큰 잔존 $(printf '%s\n' "$tok" | grep -c .)개 파일: $(printf '%s' "$tok" | head -5 | tr '\n' ' ') — machine.env 확인 후 bootstrap-machine.sh 재실행"; else ok "머신 토큰 치환 정합"; fi
 # statusline node 경로 유효성(있으면)
 node_ref="$(jq -r '.statusLine.command // empty' "$DEST/settings.json" 2>/dev/null | grep -oE '/[^" ]+/bin/node' | head -1 || true)"
 if [ -n "$node_ref" ]; then [ -x "$node_ref" ] && ok "statusline node 경로 유효($node_ref)" || warn "statusline node 경로 무효($node_ref) — 실제 node=$(command -v node 2>/dev/null || echo 없음)"; fi

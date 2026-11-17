@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=안내 · 도구부재=통과
 # PreToolUse(Skill|Workflow) 전역 훅 — 검증·리뷰 단계에 들어서면 effort 사다리를 세션당 1회 상기한다(경고형, 차단 없음).
 #   진입 신호: 스킬 harness · regress-* · playwright-verify · commit-review / 워크플로 commit-review·delta-review(scriptPath·name·script 본문).
 #   effort 전환은 사용자 명령(/effort)이라 에이전트는 권고만 한다. 근거 = ~/.claude/rules-rationale/effort-model-operation.md

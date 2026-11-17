@@ -15,7 +15,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Shell syntax (bash -n)
         run: |
@@ -37,3 +37,8 @@ jobs:
 
       - name: Hook regression suite
         run: bash test-hooks.sh
+
+      - name: Hook policy report and retention tests
+        run: |
+          bash global/skills/agent-audit/scripts/hook-policy-report.test.sh
+          bash global/hooks/hook-events-retention.test.sh

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=차단 · 도구부재=차단
 # 커밋 내용 게이트(층 A — 호출부 조회 = `grep -n 'GATES=' .claude/hooks/git/pre-commit`) — CLAUDE.md 🧪검증 "harness 는 compile 까지, 커밋 전 mvn test 총계(SUCCESS/FAILURE)를
 # 직접 확인"의 강제화 후반부. 근거 처분: project:검증:2 (+ project:검증:5 병합).
 # 짝 = mvn-test-record.sh(PostToolUse·PostToolUseFailure 기록기)가 남기는 .claude/.last-mvn-test.

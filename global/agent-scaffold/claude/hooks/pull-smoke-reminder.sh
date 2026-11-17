@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=안내 · 도구부재=통과
 # PostToolUse(Bash) — CLAUDE.md "pull 후 스모크" 규칙의 리마인더 자동화.
 # git pull 로 팀 커밋이 유입되면(Already up to date 가 아니면) additionalContext 로
 # "작업 착수 전 harness 스모크 1회" 리마인더를 컨텍스트에 주입한다(차단 아님·정보 주입만).

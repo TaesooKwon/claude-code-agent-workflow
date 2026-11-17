@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=안내 · 도구부재=통과
 # SessionStart — 층 A(git 훅) 설치 점검. 커밋 내용 게이트는 git 훅 층에서 돌기 때문에, 스텁이 없거나(새 clone·.git/hooks 초기화)
 # 실행 비트가 빠졌거나 core.hooksPath 로 무효화되면 에이전트 커밋이 게이트 없이 조용히 통과한다 → 세션 머리에 알린다.
 # 판정 = install-git-hooks.sh --check 의 rc(0 = 설치됨). 차단 아님. 점검 자체를 못 하면(레포 아님·jq 없음) 무출력 exit 0.

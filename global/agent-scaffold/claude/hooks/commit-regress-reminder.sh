@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=차단 · 도구부재=통과
 # audit: unregistered-ok — 사용자 결정(2026-09-18)으로 존치하되 settings 에 등록하지 않는다(발동하지 않음).
 # (미등록 옵트인 — 위 줄) 등록하면 PreToolUse(Bash) — "커밋 전 회귀" 소프트 리마인더(당일 1회 차단 후 통과).
 # CLAUDE.md "커밋 전 regress" 규칙의 반자동 승격: 하드 차단 대신, 회귀 마커가 오늘자가

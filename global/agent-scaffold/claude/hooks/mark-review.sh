@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=보조 · 도구부재=-
 # audit: unregistered-ok — 훅 이벤트에 걸지 않고 에이전트가 직접 호출하는 CLI(게이트 훅의 통과 마커를 찍는다).
 # 커밋 전 코드리뷰 완료 마커 기록 — code-review-marker-reminder.sh 게이트의 통과 조건.
 # 근거 처분: project:검증:20 (리뷰 결과가 **완결**일 때만 마커를 찍는다 — reviewComplete 를 눈으로 읽고

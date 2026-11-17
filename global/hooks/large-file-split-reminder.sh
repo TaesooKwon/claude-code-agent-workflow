@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=안내 · 도구부재=통과
 # PostToolUse(Write|Edit) 전역 훅 — 전역 CLAUDE.md "편집 안전" 절 "1,000줄 넘는 파일은 줄을 더하기 전에
 # 분해를 먼저 검토한다"(판정 = diff 크기가 아니라 파일 총 라인)의 상기 장치. 경고형(차단 없음).
 # 근거 처분 id = global:편집안전:9.

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# hook-policy: 강제=차단 · 도구부재=통과
 # Closed-loop history enforcement (Antigravity "Hermes" protocol) for the
 # IdeaProjects Spring repos. On Stop, if this session edited source files in
 # a repo but never recorded the learning afterwards, block the stop with a
