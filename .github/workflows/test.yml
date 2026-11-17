@@ -1,0 +1,39 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hooks:
+    # 훅은 macOS 기본 bash 3.2·BSD 도구 기준으로 작성·검증된다.
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Shell syntax (bash -n)
+        run: |
+          set -u
+          fail=0
+          while IFS= read -r f; do
+            bash -n "$f" || { echo "syntax error: $f"; fail=1; }
+          done < <(git ls-files '*.sh')
+          exit $fail
+
+      - name: JSON templates parse
+        run: |
+          set -u
+          fail=0
+          while IFS= read -r f; do
+            jq empty "$f" || { echo "invalid JSON: $f"; fail=1; }
+          done < <(git ls-files '*.json' '*.json.template' '*.json.example')
+          exit $fail
+
+      - name: Hook regression suite
+        run: bash test-hooks.sh
