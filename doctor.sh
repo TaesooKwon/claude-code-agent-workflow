@@ -79,10 +79,11 @@ if [ -f "$DEST/settings.json" ] && [ -f "$TMPL" ] && command -v jq >/dev/null 2>
   # 이벤트별 등록 훅 "집합" 대조 — 라이브에서 훅을 해제/추가하고 킷 템플릿에 미반영하는 드리프트 조기 경보
   # (실례 2026-08-13: rules-size-check 해제 같은 변경이 한쪽에만 남는 것을 잡는다).
   # 파일명 = command 의 마지막 '/' 뒤에서 끝의 따옴표·공백 등 비이름 문자를 뗀 것(`node "/x/a.js"` → a.js).
+  # 훅 파일 확장자(.sh·.py·.js·.mjs)로 끝나는 이름만 센다 — 외부 앱이 넣은 인라인 셸 명령(파일 없음)은 등록 훅이 아니다.
   hx="$(printf '%s\n' "$HEXCL" | jq -R . | jq -sc 'map(select(length > 0))')"
   for ev in Stop PreToolUse PostToolUse SessionStart; do
-    lv="$(jq -r --arg e "$ev" --argjson x "$hx" '[.hooks[$e][]?.hooks[]?.command] | map(split("/")|last|sub("[^A-Za-z0-9._-]+$";"")) | map(select(. as $n | $x | index($n) | not)) | sort | join(",")' "$DEST/settings.json" 2>/dev/null)"
-    tv="$(jq -r --arg e "$ev" --argjson x "$hx" '[.hooks[$e][]?.hooks[]?.command] | map(split("/")|last|sub("[^A-Za-z0-9._-]+$";"")) | map(select(. as $n | $x | index($n) | not)) | sort | join(",")' "$TMPL" 2>/dev/null)"
+    lv="$(jq -r --arg e "$ev" --argjson x "$hx" '[.hooks[$e][]?.hooks[]?.command] | map(split("/")|last|sub("[^A-Za-z0-9._-]+$";"")) | map(select(test("\\.(sh|py|js|mjs)$"))) | map(select(. as $n | $x | index($n) | not)) | sort | join(",")' "$DEST/settings.json" 2>/dev/null)"
+    tv="$(jq -r --arg e "$ev" --argjson x "$hx" '[.hooks[$e][]?.hooks[]?.command] | map(split("/")|last|sub("[^A-Za-z0-9._-]+$";"")) | map(select(test("\\.(sh|py|js|mjs)$"))) | map(select(. as $n | $x | index($n) | not)) | sort | join(",")' "$TMPL" 2>/dev/null)"
     [ "$lv" = "$tv" ] && ok "hooks.$ev 등록 집합 정합(${lv:-등록없음})" || warn "hooks.$ev 등록 집합 드리프트 — 라이브[${lv:-없음}] vs 킷[${tv:-없음}] (수동 판정 후 동기)"
   done
 else warn "settings.json/템플릿/jq 없음 — 키 드리프트 확인 불가"; fi
