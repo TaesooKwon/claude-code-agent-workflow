@@ -11,7 +11,8 @@ import { mkdirSync } from 'fs';
 const require = createRequire('__HOME__/.claude/skills/playwright-verify/');
 const { chromium } = require('playwright');
 
-// ===== CONFIG (레포별로 채움 — application.properties/LoginController/cms-verify-login 으로 self-discover) =====
+// ===== CONFIG (레포별로 채움 — application.properties/LoginController 로 self-discover. 비밀번호는 env CMS_PASS 로만 —
+//        스위트에 키체인을 읽는 로그인 헬퍼가 있으면 이 템플릿 대신 그 헬퍼를 쓴다(조회·복사 금지)) =====
 const CONFIG = {
   // BASE = http://localhost:<server.port><context-path>  (추측 금지! properties 실측)
   BASE: 'http://localhost:8080/example-admin',

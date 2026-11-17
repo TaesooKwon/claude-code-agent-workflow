@@ -49,7 +49,7 @@ grep -nE "server\.port|server\.servlet\.context-path" <WEB_MODULE>/src/main/reso
   미인증 접근이 unauthorized로 가는 앱이면 보호 URL로 가지 말고 **로그인 페이지로 직접** 이동.
 - **로그인 폼 필드/버튼** = 로그인 템플릿에서 확인(예: `#userId`/`#userPswd` + `#loginForm button[type=submit]`).
   로그인이 ajax면 클릭 후 리다이렉트까지 `waitForTimeout`(2~3초).
-- **계정** = 각 레포 `cms-verify-login` 메모리(없으면 사용자에게). 민감값은 로그/문서에 원문 노출 금지.
+- **계정** = 로그인은 각 레포 스위트의 로그인 헬퍼로 — 헬퍼가 비밀번호를 키체인 등에서 직접 읽어 `page.fill` 에 넘기게 해 값이 에이전트 맥락에 오지 않게 한다. **비밀번호 조회·출력·복사 금지.** 헬퍼가 없는 레포는 사용자에게. 민감값은 로그/문서에 원문 노출 금지.
 - **셀렉터** = ag-Grid 행 `.ag-row`, 모달 `dialog[data-modal="..."]`, 상세버튼 등 해당 화면 기준.
 
 ## 2) 스크린샷 저장 위치 — 각 레포 안에
