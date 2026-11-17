@@ -1,0 +1,288 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "_comment": "bootstrap-machine.sh 가 홈경로 등 토큰을 치환해 ~/.claude/settings.json 으로 설치(설치본에선 실경로가 채워짐). statusline/plugins 는 플러그인 고유라 제외(SETUP.md 참조). theme·enabledMcpjsonServers 는 새 머신 재현용으로 포함하되, 회사 프로젝트 식별자는 플레이스홀더로 두고 로컬에서 교체.",
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(mvn *)",
+      "Bash(./mvnw *)",
+      "Bash(./gradlew *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "Bash(git branch*)",
+      "Bash(git stash list*)",
+      "Bash(git fetch*)"
+    ],
+    "ask": [
+      "mcp____PROJECT__-real-db",
+      "Bash(git checkout -- *)",
+      "Bash(git checkout .*)",
+      "Bash(git checkout -f*)",
+      "Bash(git restore .*)",
+      "Bash(git restore :/*)",
+      "Bash(git restore --worktree*)",
+      "Bash(git restore -W*)",
+      "Bash(git restore --source*)",
+      "Bash(git switch -f*)",
+      "Bash(git switch --discard-changes*)",
+      "Bash(git stash)",
+      "Bash(git stash push*)",
+      "Bash(git stash drop*)",
+      "Bash(git stash clear*)",
+      "Bash(rm -r *)",
+      "Bash(rm -R *)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(rm -fr *)",
+      "Bash(rm -r -f *)",
+      "Bash(rm -f -r *)",
+      "Bash(rm -Rf *)",
+      "Bash(rm -fR *)",
+      "Bash(rm -R -f *)",
+      "Bash(rm -f -R *)",
+      "Bash(rm --recursive *)",
+      "Bash(find * -delete*)",
+      "Bash(shred *)",
+      "Bash(git branch -D *)",
+      "Bash(sudo *)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)",
+      "Bash(git clean -*f*)",
+      "Bash(dd *)",
+      "Bash(mkfs*)",
+      "Bash(chmod -R 777*)",
+      "Bash(chown -R *)",
+      "Bash(shutdown*)",
+      "Bash(reboot*)",
+      "Bash(kill -9 *)",
+      "Bash(killall *)",
+      "Bash(truncate *)",
+      "Bash(* > /dev/sd*)",
+      "Bash(mysql *)",
+      "Bash(mysqldump *)"
+    ]
+  },
+  "_comment_mcp": "프로젝트별 dev DB MCP 화이트리스트. 실제 서버명은 회사 프로젝트 식별자라 킷엔 플레이스홀더만 둔다 — 새 머신에서 실제 이름으로 교체(각 프로젝트 .mcp.json 배선은 bootstrap-project 경유). 전역 MCP(context7 등)는 SETUP.md 참조.",
+  "enabledMcpjsonServers": [
+    "__PROJECT__-dev-db"
+  ],
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/closed-loop-history.sh",
+            "timeout": 15,
+            "statusMessage": "폐쇄형 루프: history/memory 기록 확인 중"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/convention-gate.sh",
+            "timeout": 20,
+            "statusMessage": "컨벤션 게이트: 변경분 규약 검사 중"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/history-rotate-check.sh",
+            "timeout": 15,
+            "statusMessage": "history 로테이션 확인 중"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/rules-size-check.sh",
+            "timeout": 15,
+            "statusMessage": "상시 로드 규약 크기 확인 중"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/notify-done.sh",
+            "timeout": 10,
+            "statusMessage": "완료 알림 발송 중",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|mcp____PROJECT__-real-db__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/destructive-cmd-ask.sh",
+            "timeout": 10,
+            "statusMessage": "파괴 명령 확인: 워킹트리·운영 DB 호출 ask 검사..."
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/lsp-first-reminder.sh",
+            "timeout": 10,
+            "statusMessage": "LSP 우선 리마인더: Java 심볼 grep 검사..."
+          },
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/mvn-clean-on-delete-reminder.sh",
+            "timeout": 10,
+            "statusMessage": "stale target 리마인더: 삭제 후 clean 검사..."
+          },
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/zsh-glob-quote-guard.sh",
+            "timeout": 10,
+            "statusMessage": "zsh 글롭 인용 경고: 미인용 --include/-name 검사..."
+          },
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/mvn-am-guard.sh",
+            "timeout": 10,
+            "statusMessage": "mvn -am 경고: -pl 단독 빌드 검사..."
+          },
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/git-push-guard.sh",
+            "timeout": 10,
+            "statusMessage": "푸시 가드: git push 차단 검사..."
+          },
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/commit-tier-calc.sh",
+            "timeout": 15,
+            "statusMessage": "커밋 티어 계산: A/B·소형A 판정..."
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/write-overwrite-guard.sh",
+            "timeout": 10,
+            "statusMessage": "Write 덮어쓰기 가드: 기존 파일 검사..."
+          }
+        ]
+      },
+      {
+        "matcher": "^(Skill|Workflow)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/effort-stage-reminder.sh",
+            "timeout": 5,
+            "statusMessage": "effort 단계 리마인더: 검증·리뷰 진입 검사..."
+          }
+        ]
+      },
+      {
+        "matcher": "^(Agent|Workflow)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/delegation-floor-reminder.sh",
+            "timeout": 10,
+            "statusMessage": "위임 하한선 리마인더: 5항목 라벨 검사..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/setting-placement-reminder.sh",
+            "timeout": 10,
+            "statusMessage": "세팅 배치 판정 리마인더"
+          },
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/large-file-split-reminder.sh",
+            "timeout": 10,
+            "statusMessage": "대형 파일 분해 리마인더: 1,000줄 초과 검사..."
+          },
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/twin-file-reminder.sh",
+            "timeout": 10,
+            "statusMessage": "복제 파일 리마인더: 형제 모듈 같은 경로 검사..."
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/kit-drift-check.sh",
+            "timeout": 15,
+            "statusMessage": "킷 드리프트 점검"
+          },
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/hook-events-retention.sh",
+            "timeout": 15,
+            "statusMessage": "훅 관측 로그 보존 회전"
+          }
+        ]
+      }
+    ]
+  },
+  "teammateMode": "auto",
+  "skipWorkflowUsageWarning": true,
+  "theme": "dark",
+  "autoContinueAtUsageLimit": true,
+  "cleanupPeriodDays": 45,
+  "language": "korean",
+  "modelSettings": {
+    "claude-fable-5-1": {
+      "effortLevel": "high"
+    },
+    "claude-sonnet-5": {
+      "effortLevel": "xhigh"
+    },
+    "claude-opus-5": {
+      "effortLevel": "xhigh"
+    },
+    "claude-opus-5-5": {
+      "effortLevel": "medium"
+    },
+    "claude-sonnet-5-5": {
+      "effortLevel": "medium"
+    }
+  },
+  "voice": {
+    "enabled": true,
+    "mode": "hold"
+  },
+  "voiceEnabled": true
+}

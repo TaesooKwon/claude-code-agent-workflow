@@ -1,0 +1,47 @@
+/**
+ * <<KOR>> 등록/수정 화면 스크립트 (BO)
+ * 전역 의존: CTX_ROOT, CODE, {{JS_NS}}(requestFetch/alert/showValidHint) — cmsSubLayout이 로드
+ */
+(function() {
+    const TXT = {
+        <<BLOCK:TXT_MESSAGES>>
+        createSuccess: "정상적으로 등록되었습니다.",
+        modifySuccess: "정상적으로 수정되었습니다.",
+        createError: "등록 중 오류가 발생했습니다.",
+        modifyError: "수정 중 오류가 발생했습니다."
+    };
+
+    document.addEventListener("submit", function(e) {
+        if (!e.target.closest("#<<domain>>RegForm")) {
+            return;
+        }
+        e.preventDefault();
+
+        const formEl = e.target;
+        const actionMode = formEl.querySelector("[name='actionMode']").value;
+
+        <<BLOCK:CLIENT_VALIDATIONS>>
+
+        {{JS_NS}}.requestFetch(formEl.getAttribute("action"), {
+            method: "post",
+            body: new FormData(formEl),
+        }, function(resp) {
+            if (!resp || typeof resp.resultCode === "undefined") {
+                return;
+            }
+            if (resp.resultCode === CODE.RCV_SUCCESS) {
+                {{JS_NS}}.alert(actionMode === "I" ? TXT.createSuccess : TXT.modifySuccess, function() {
+                    location.href = `${CTX_ROOT}/<<module>>/<<pkg>>/read<<Domain>>.do`;
+                });
+                return;
+            }
+            if (resp.resultCode === CODE.RCV_ERROR_VALID && resp.result && resp.result.validErrList) {
+                {{JS_NS}}.showValidHint(formEl, resp.result.validErrList); // 서버 Bean Validation 에러 → 필드 힌트
+                return;
+            }
+            {{JS_NS}}.alert(actionMode === "I" ? TXT.createError : TXT.modifyError);
+        }, function() {
+            {{JS_NS}}.alert(actionMode === "I" ? TXT.createError : TXT.modifyError);
+        });
+    });
+})();

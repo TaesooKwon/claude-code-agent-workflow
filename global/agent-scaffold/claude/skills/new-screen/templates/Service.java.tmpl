@@ -1,0 +1,26 @@
+package {{PKG_CORE}}.<<module>>.<<pkg>>.service;
+
+import {{PKG_CORE}}.<<module>>.<<pkg>>.dto.Pa<<Domain>>;
+import {{PKG_CORE}}.<<module>>.<<pkg>>.dto.Pa<<Domain>>Srch;
+import {{PKG_CORE}}.<<module>>.<<pkg>>.dto.Rs<<Domain>>;
+import {{PKG_CORE}}.<<module>>.<<pkg>>.entity.<<Domain>>;
+
+import java.util.List;
+
+/**
+ * <<KOR>> Service
+ */
+public interface <<Domain>>Service {
+
+    List<Rs<<Domain>>> read<<Domain>>List(Pa<<Domain>>Srch search) throws Exception;
+
+    int read<<Domain>>ListCnt(Pa<<Domain>>Srch search) throws Exception;
+
+    <<Domain>> read<<Domain>>(Pa<<Domain>> pa<<Domain>>) throws Exception;
+
+    String create<<Domain>>(<<Domain>> <<domain>>) throws Exception;
+
+    void modify<<Domain>>(<<Domain>> <<domain>>) throws Exception;
+
+    void delete<<Domain>>(<<Domain>> <<domain>>) throws Exception;
+}

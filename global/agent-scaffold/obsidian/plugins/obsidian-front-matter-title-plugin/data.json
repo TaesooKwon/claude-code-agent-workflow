@@ -1,0 +1,17 @@
+{
+  "templates": {
+    "common": {
+      "main": "metadata.title",
+      "fallback": "fallback_title"
+    }
+  },
+  "rules": {
+    "paths": { "mode": "black", "values": [] },
+    "delimiter": { "enabled": false, "value": "" }
+  },
+  "features": {
+    "explorer": { "enabled": true, "templates": { "main": "", "fallback": "" } },
+    "header": { "enabled": true, "templates": { "main": "", "fallback": "" } },
+    "graph": { "enabled": true, "templates": { "main": "", "fallback": "" } }
+  }
+}

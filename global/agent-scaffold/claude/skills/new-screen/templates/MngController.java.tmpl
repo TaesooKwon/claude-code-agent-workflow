@@ -1,0 +1,238 @@
+package {{PKG_ADMIN}}.<<module>>.<<pkg>>.web;
+
+import egovframework.com.cmm.LoginVO;
+import egovframework.com.cmm.ResponseCode;
+import egovframework.com.cmm.service.ResultVO;
+import egovframework.com.cmm.util.ResultVoHelper;
+import io.swagger.v3.oas.annotations.Parameter;
+import {{BASE_CONTROLLER_FQN}};
+<<IF:SITE>>
+import {{SITE_HELPER_FQN}};
+<<ENDIF:SITE>>
+import {{PKG_CORE}}.<<module>>.<<pkg>>.dto.Pa<<Domain>>;
+import {{PKG_CORE}}.<<module>>.<<pkg>>.dto.Pa<<Domain>>Srch;
+import {{PKG_CORE}}.<<module>>.<<pkg>>.dto.Rs<<Domain>>;
+import {{PKG_CORE}}.<<module>>.<<pkg>>.entity.<<Domain>>;
+import {{PKG_CORE}}.<<module>>.<<pkg>>.service.<<Domain>>Service;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.egovframe.rte.ptl.mvc.tags.ui.pagination.PaginationInfo;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+<<IF:AUDIT_USER>>
+import org.springframework.util.StringUtils;
+<<ENDIF:AUDIT_USER>>
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import javax.validation.Valid;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * <<KOR>> 관리 Controller (BO)
+ */
+@Slf4j
+@Controller
+@RequiredArgsConstructor
+@RequestMapping("/<<module>>/<<pkg>>")
+public class Mng<<Domain>>Controller extends DefaultController {
+
+    private static final String VIEW_PATH = "<<module>>/<<pkg>>/";
+    private static final String READ_LIST_ERROR_MESSAGE = "<<KOR>> 목록을 불러오는 중 오류가 발생했습니다.";
+
+    private final <<Domain>>Service <<domain>>Service;
+    private final ResultVoHelper resultVoHelper;
+<<IF:SITE>>
+    private final SiteDmnHelper siteDmnHelper;
+<<ENDIF:SITE>>
+
+    @GetMapping("/index.do")
+    public String indexRedirect() {
+        return "redirect:/<<module>>/<<pkg>>/read<<Domain>>.do";
+    }
+
+    /** 목록 화면 */
+    @GetMapping("/read<<Domain>>.do")
+    public String read<<Domain>>(@ModelAttribute("search") Pa<<Domain>>Srch search, Model model) throws Exception {
+        model.addAttribute("title", "<<KOR>> 관리");
+        return VIEW_PATH + "<<domain>>Index";
+    }
+
+    /** 목록 데이터 */
+    @GetMapping("/read<<Domain>>List.json")
+    @ResponseBody
+    public ResultVO read<<Domain>>List(Pa<<Domain>>Srch search) throws Exception {
+        Map<String, Object> resultMap = new HashMap<>();
+        try {
+<<IF:SITE>>
+            search.setSiteIdntfNo(siteDmnHelper.getSiteIdntfNo());
+<<ENDIF:SITE>>
+            PaginationInfo paginationInfo = this.setPagination(search);
+            List<Rs<<Domain>>> resultList = <<domain>>Service.read<<Domain>>List(search);
+            int totCnt = <<domain>>Service.read<<Domain>>ListCnt(search);
+            paginationInfo.setTotalRecordCount(totCnt);
+
+            resultMap.put("resultList", resultList);
+            resultMap.put("paginationInfo", paginationInfo);
+            return resultVoHelper.buildFromMap(resultMap, ResponseCode.SUCCESS);
+        } catch (Exception e) {
+            log.error("<<KOR>> 목록 조회 중 오류가 발생했습니다.", e);
+            return resultVoHelper.buildFromMap(resultMap, ResponseCode.INPUT_CHECK_ERROR, "<<domain>>List", READ_LIST_ERROR_MESSAGE);
+        }
+    }
+
+    /** 등록 화면 */
+    @GetMapping("/create<<Domain>>.do")
+    public String create<<Domain>>(Model model) throws Exception {
+        model.addAttribute("title", "<<KOR>> 등록");
+        model.addAttribute("<<domain>>", Pa<<Domain>>.builder()<<DEFAULT_BUILDER>>.build());
+        model.addAttribute("actionMode", "I");
+        return VIEW_PATH + "<<domain>>Insert";
+    }
+
+    /** 등록 처리 (PUT 정식 + POST 폴백) */
+    @PutMapping("/create<<Domain>>.json")
+    @ResponseBody
+    public ResultVO create<<Domain>>(@Valid Pa<<Domain>> pa<<Domain>>,
+                                     BindingResult bindingResult,
+                                     @Parameter(hidden = true) @AuthenticationPrincipal LoginVO user) throws Exception {
+        Map<String, Object> resultMap = new HashMap<>();
+        if (bindingResult.hasErrors()) {
+            return resultVoHelper.buildFromMap(resultMap, ResponseCode.INPUT_CHECK_ERROR, bindingResult);
+        }
+
+        <<Domain>> <<domain>> = pa<<Domain>>.toEntity();
+<<IF:SITE>>
+        <<domain>>.setSiteIdntfNo(siteDmnHelper.getSiteIdntfNo());
+<<ENDIF:SITE>>
+<<IF:AUDIT_RGTR>>
+        <<domain>>.setFrstRgtrIdntfNo(getUserIdntfNo(user));
+<<ENDIF:AUDIT_RGTR>>
+<<IF:AUDIT_MDFR>>
+        <<domain>>.setLastMdfrIdntfNo(getUserIdntfNo(user));
+<<ENDIF:AUDIT_MDFR>>
+        <<domain>>Service.create<<Domain>>(<<domain>>);
+        return resultVoHelper.buildFromMap(resultMap, ResponseCode.SUCCESS);
+    }
+
+    @PostMapping("/create<<Domain>>.json")
+    @ResponseBody
+    public ResultVO create<<Domain>>ByPost(@Valid Pa<<Domain>> pa<<Domain>>,
+                                           BindingResult bindingResult,
+                                           @Parameter(hidden = true) @AuthenticationPrincipal LoginVO user) throws Exception {
+        return create<<Domain>>(pa<<Domain>>, bindingResult, user);
+    }
+
+    /** 수정 화면 (등록 뷰 공유, actionMode=U) */
+    @GetMapping("/modify<<Domain>>.do")
+    public String modify<<Domain>>(Pa<<Domain>> pa<<Domain>>, Model model) throws Exception {
+<<IF:SITE>>
+        pa<<Domain>>.setSiteIdntfNo(siteDmnHelper.getSiteIdntfNo());
+<<ENDIF:SITE>>
+        <<Domain>> <<domain>> = <<domain>>Service.read<<Domain>>(pa<<Domain>>);
+        if (<<domain>> == null) {
+            return "redirect:/<<module>>/<<pkg>>/read<<Domain>>.do";
+        }
+
+        model.addAttribute("title", "<<KOR>> 수정");
+        model.addAttribute("<<domain>>", Pa<<Domain>>.fromEntity(<<domain>>));
+        model.addAttribute("actionMode", "U");
+        return VIEW_PATH + "<<domain>>Insert";
+    }
+
+    /** 수정 처리 (PATCH 정식 + POST 폴백) — 선조회 존재검증 후 수정 */
+    @PatchMapping("/modify<<Domain>>.json")
+    @ResponseBody
+    public ResultVO modify<<Domain>>(@Valid Pa<<Domain>> pa<<Domain>>,
+                                     BindingResult bindingResult,
+                                     @Parameter(hidden = true) @AuthenticationPrincipal LoginVO user) throws Exception {
+        Map<String, Object> resultMap = new HashMap<>();
+        if (bindingResult.hasErrors()) {
+            return resultVoHelper.buildFromMap(resultMap, ResponseCode.INPUT_CHECK_ERROR, bindingResult);
+        }
+
+        <<Domain>> old<<Domain>> = <<domain>>Service.read<<Domain>>(Pa<<Domain>>.builder()
+                .<<pkField>>(pa<<Domain>>.get<<PkField>>())
+<<IF:SITE>>
+                .siteIdntfNo(siteDmnHelper.getSiteIdntfNo())
+<<ENDIF:SITE>>
+                .build());
+        if (old<<Domain>> == null) {
+            return resultVoHelper.buildFromMap(resultMap, ResponseCode.NOT_FOUND_ERROR);
+        }
+
+        <<Domain>> <<domain>> = pa<<Domain>>.toEntity();
+<<IF:SITE>>
+        <<domain>>.setSiteIdntfNo(siteDmnHelper.getSiteIdntfNo());
+<<ENDIF:SITE>>
+<<IF:AUDIT_MDFR>>
+        <<domain>>.setLastMdfrIdntfNo(getUserIdntfNo(user));
+<<ENDIF:AUDIT_MDFR>>
+        <<domain>>Service.modify<<Domain>>(<<domain>>);
+        return resultVoHelper.buildFromMap(resultMap, ResponseCode.SUCCESS);
+    }
+
+    @PostMapping("/modify<<Domain>>.json")
+    @ResponseBody
+    public ResultVO modify<<Domain>>ByPost(@Valid Pa<<Domain>> pa<<Domain>>,
+                                           BindingResult bindingResult,
+                                           @Parameter(hidden = true) @AuthenticationPrincipal LoginVO user) throws Exception {
+        return modify<<Domain>>(pa<<Domain>>, bindingResult, user);
+    }
+
+    /** 삭제 (DELETE 정식 + POST 폴백, 복수 ID) — 소프트 딜리트 */
+    @DeleteMapping("/delete<<Domain>>.json")
+    @ResponseBody
+    public ResultVO delete<<Domain>>(@RequestParam("<<pkField>>s") List<<<pkType>>> <<pkField>>s,
+                                     @Parameter(hidden = true) @AuthenticationPrincipal LoginVO user) throws Exception {
+        Map<String, Object> resultMap = new HashMap<>();
+<<IF:AUDIT_MDFR>>
+        String userIdntfNo = getUserIdntfNo(user);
+<<ENDIF:AUDIT_MDFR>>
+
+        for (<<pkType>> <<pkField>> : <<pkField>>s) {
+            <<domain>>Service.delete<<Domain>>(<<Domain>>.builder()
+                    .<<pkField>>(<<pkField>>)
+<<IF:AUDIT_MDFR>>
+                    .lastMdfrIdntfNo(userIdntfNo)
+<<ENDIF:AUDIT_MDFR>>
+                    .build());
+        }
+        return resultVoHelper.buildFromMap(resultMap, ResponseCode.SUCCESS);
+    }
+
+    @PostMapping("/delete<<Domain>>.json")
+    @ResponseBody
+    public ResultVO delete<<Domain>>ByPost(@RequestParam("<<pkField>>s") List<<<pkType>>> <<pkField>>s,
+                                           @Parameter(hidden = true) @AuthenticationPrincipal LoginVO user) throws Exception {
+        return delete<<Domain>>(<<pkField>>s, user);
+    }
+
+<<IF:AUDIT_USER>>
+    // ⚠️ REEXTRACT: 대상 레포 base controller가 동명 getUserIdntfNo(protected)를 이미 제공하면
+    //    이 헬퍼와 StringUtils import 를 제거하라 — private 재정의는 가시성 축소로 컴파일 오류(예시 레포 실측 2026-08-05).
+    private String getUserIdntfNo(LoginVO user) {
+        if (user == null) {
+            return "SYSTEM";
+        }
+        if (StringUtils.hasText(user.getUniqId())) {
+            return user.getUniqId();
+        }
+        if (StringUtils.hasText(user.getId())) {
+            return user.getId();
+        }
+        return "SYSTEM";
+    }
+<<ENDIF:AUDIT_USER>>
+}

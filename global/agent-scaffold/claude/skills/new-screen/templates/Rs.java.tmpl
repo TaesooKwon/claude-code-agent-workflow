@@ -1,0 +1,18 @@
+package {{PKG_CORE}}.<<module>>.<<pkg>>.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * <<KOR>> 목록 응답 DTO
+ */
+@Getter
+@Setter
+public class Rs<<Domain>> {
+
+    @Schema(description = "<<KOR>> 식별번호")
+    private <<pkType>> <<pkField>>;
+
+    <<BLOCK:RS_FIELDS>>
+}

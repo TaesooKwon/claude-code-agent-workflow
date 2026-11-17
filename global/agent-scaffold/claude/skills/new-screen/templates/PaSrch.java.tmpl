@@ -1,0 +1,22 @@
+package {{PKG_CORE}}.<<module>>.<<pkg>>.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import {{BASE_SEARCH_VO_FQN}};
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
+
+import java.io.Serializable;
+
+/**
+ * <<KOR>> 검색조건 DTO
+ */
+@Getter
+@Setter
+@ToString(callSuper = true)
+public class Pa<<Domain>>Srch extends DefaultSearchVO implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    <<BLOCK:SRCH_FIELDS>>
+}

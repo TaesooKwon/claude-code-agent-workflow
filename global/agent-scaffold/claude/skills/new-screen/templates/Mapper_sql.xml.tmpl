@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="{{PKG_CORE}}.<<module>>.<<pkg>>.mapper.<<Domain>>Mapper">
+
+    <sql id="where<<Domain>>List">
+        <where>
+            AND a.DEL_YN = 'N'
+            <<BLOCK:WHERE_CONDS>>
+        </where>
+    </sql>
+
+    <select id="read<<Domain>>List" parameterType="{{PKG_CORE}}.<<module>>.<<pkg>>.dto.Pa<<Domain>>Srch" resultType="{{PKG_CORE}}.<<module>>.<<pkg>>.dto.Rs<<Domain>>">
+        SELECT
+            <<BLOCK:LIST_COLS>>
+        FROM <<TABLE>> a
+        <include refid="where<<Domain>>List"/>
+        ORDER BY <<ORDER_BY>>
+        LIMIT #{recordCountPerPage} OFFSET #{firstIndex}
+    </select>
+
+    <select id="read<<Domain>>ListCnt" parameterType="{{PKG_CORE}}.<<module>>.<<pkg>>.dto.Pa<<Domain>>Srch" resultType="int">
+        SELECT COUNT(*)
+        FROM <<TABLE>> a
+        <include refid="where<<Domain>>List"/>
+    </select>
+
+    <select id="read<<Domain>>" parameterType="{{PKG_CORE}}.<<module>>.<<pkg>>.dto.Pa<<Domain>>" resultType="{{PKG_CORE}}.<<module>>.<<pkg>>.entity.<<Domain>>">
+        SELECT
+            <<BLOCK:DETAIL_COLS>>
+        FROM <<TABLE>> a
+        WHERE a.<<PK_COLUMN>> = #{<<pkField>>}
+          <<BLOCK:DETAIL_SITE_COND>>
+          AND a.DEL_YN = 'N'
+    </select>
+
+<<IF:PK_NUMERIC>>
+    <select id="read<<Domain>>NextSn" resultType="long">
+        SELECT IFNULL(MAX(<<PK_COLUMN>>), 0) + 1 FROM <<TABLE>>
+    </select>
+
+<<ENDIF:PK_NUMERIC>>
+    <insert id="create<<Domain>>" parameterType="{{PKG_CORE}}.<<module>>.<<pkg>>.entity.<<Domain>>">
+        INSERT INTO <<TABLE>> (
+            <<BLOCK:INSERT_COLS>>
+        ) VALUES (
+            <<BLOCK:INSERT_VALS>>
+        )
+    </insert>
+
+    <update id="modify<<Domain>>" parameterType="{{PKG_CORE}}.<<module>>.<<pkg>>.entity.<<Domain>>">
+        UPDATE <<TABLE>>
+        <set>
+            <<BLOCK:SET_LINES>>
+        </set>
+        WHERE <<PK_COLUMN>> = #{<<pkField>>}
+    </update>
+
+    <update id="delete<<Domain>>" parameterType="{{PKG_CORE}}.<<module>>.<<pkg>>.entity.<<Domain>>">
+        UPDATE <<TABLE>>
+        SET DEL_YN = 'Y'
+            <<BLOCK:DELETE_AUDIT_SETS>>
+        WHERE <<PK_COLUMN>> = #{<<pkField>>}
+    </update>
+</mapper>

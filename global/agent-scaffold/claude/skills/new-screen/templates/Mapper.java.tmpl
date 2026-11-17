@@ -1,0 +1,32 @@
+package {{PKG_CORE}}.<<module>>.<<pkg>>.mapper;
+
+import {{PKG_CORE}}.<<module>>.<<pkg>>.dto.Pa<<Domain>>;
+import {{PKG_CORE}}.<<module>>.<<pkg>>.dto.Pa<<Domain>>Srch;
+import {{PKG_CORE}}.<<module>>.<<pkg>>.dto.Rs<<Domain>>;
+import {{PKG_CORE}}.<<module>>.<<pkg>>.entity.<<Domain>>;
+import org.apache.ibatis.annotations.Mapper;
+
+import java.util.List;
+
+/**
+ * <<KOR>> Mapper
+ */
+@Mapper
+public interface <<Domain>>Mapper {
+
+    List<Rs<<Domain>>> read<<Domain>>List(Pa<<Domain>>Srch search) throws Exception;
+
+    int read<<Domain>>ListCnt(Pa<<Domain>>Srch search) throws Exception;
+
+    <<Domain>> read<<Domain>>(Pa<<Domain>> pa<<Domain>>) throws Exception;
+
+<<IF:PK_NUMERIC>>
+    Long read<<Domain>>NextSn() throws Exception;
+
+<<ENDIF:PK_NUMERIC>>
+    void create<<Domain>>(<<Domain>> <<domain>>) throws Exception;
+
+    void modify<<Domain>>(<<Domain>> <<domain>>) throws Exception;
+
+    void delete<<Domain>>(<<Domain>> <<domain>>) throws Exception;
+}

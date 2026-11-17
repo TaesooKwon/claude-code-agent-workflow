@@ -1,0 +1,59 @@
+package {{PKG_CORE}}.<<module>>.<<pkg>>.service.impl;
+
+<<IF:PK_UUID>>
+import {{UUID_UTIL_FQN}};
+<<ENDIF:PK_UUID>>
+import {{PKG_CORE}}.<<module>>.<<pkg>>.dto.Pa<<Domain>>;
+import {{PKG_CORE}}.<<module>>.<<pkg>>.dto.Pa<<Domain>>Srch;
+import {{PKG_CORE}}.<<module>>.<<pkg>>.dto.Rs<<Domain>>;
+import {{PKG_CORE}}.<<module>>.<<pkg>>.entity.<<Domain>>;
+import {{PKG_CORE}}.<<module>>.<<pkg>>.mapper.<<Domain>>Mapper;
+import {{PKG_CORE}}.<<module>>.<<pkg>>.service.<<Domain>>Service;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+/**
+ * <<KOR>> ServiceImpl
+ */
+@Service("<<domain>>Service")
+@RequiredArgsConstructor
+public class <<Domain>>ServiceImpl implements <<Domain>>Service {
+
+    private final <<Domain>>Mapper <<domain>>Mapper;
+
+    @Override
+    public List<Rs<<Domain>>> read<<Domain>>List(Pa<<Domain>>Srch search) throws Exception {
+        return <<domain>>Mapper.read<<Domain>>List(search);
+    }
+
+    @Override
+    public int read<<Domain>>ListCnt(Pa<<Domain>>Srch search) throws Exception {
+        return <<domain>>Mapper.read<<Domain>>ListCnt(search);
+    }
+
+    @Override
+    public <<Domain>> read<<Domain>>(Pa<<Domain>> pa<<Domain>>) throws Exception {
+        return <<domain>>Mapper.read<<Domain>>(pa<<Domain>>);
+    }
+
+    @Override
+    @Transactional
+    public String create<<Domain>>(<<Domain>> <<domain>>) throws Exception {
+        <<BLOCK:CREATE_BODY>>
+    }
+
+    @Override
+    @Transactional
+    public void modify<<Domain>>(<<Domain>> <<domain>>) throws Exception {
+        <<domain>>Mapper.modify<<Domain>>(<<domain>>);
+    }
+
+    @Override
+    @Transactional
+    public void delete<<Domain>>(<<Domain>> <<domain>>) throws Exception {
+        <<domain>>Mapper.delete<<Domain>>(<<domain>>);
+    }
+}

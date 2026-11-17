@@ -1,0 +1,8 @@
+{
+  "_comment": "머신 로컬 override 예시. ~/.claude/settings.local.json 으로 복사해 쓴다(커밋 안 됨, settings.json 위에 병합). 프로젝트별 임시 허용/개인 취향처럼 이식 대상이 아닌 것만 여기. 아래 allow 는 예시라 자기 환경에 맞게 교체.",
+  "permissions": {
+    "allow": [
+      "Bash(python3 src/main/tools/check_mybatis_contract.py --help)"
+    ]
+  }
+}

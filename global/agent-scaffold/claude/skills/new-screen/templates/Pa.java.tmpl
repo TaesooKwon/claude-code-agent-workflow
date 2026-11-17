@@ -1,0 +1,45 @@
+package {{PKG_CORE}}.<<module>>.<<pkg>>.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import {{PKG_CORE}}.<<module>>.<<pkg>>.entity.<<Domain>>;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+<<BLOCK:PA_IMPORTS_VALIDATION>>
+
+/**
+ * <<KOR>> 저장/수정 파라미터 DTO.
+ * 감사필드(frstRgtrIdntfNo/lastMdfrIdntfNo)는 두지 않는다 — 컨트롤러가 엔티티에 주입(서버 단일 경로).
+ */
+@Getter
+@Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class Pa<<Domain>> {
+
+    @Schema(description = "<<KOR>> 식별번호")
+    private <<pkType>> <<pkField>>;
+
+    <<BLOCK:PA_FIELDS>>
+
+    public <<Domain>> toEntity() {
+        return <<Domain>>.builder()
+                .<<pkField>>(<<pkField>>)
+                <<BLOCK:PA_TO_ENTITY>>
+                .build();
+    }
+
+    public static Pa<<Domain>> fromEntity(<<Domain>> entity) {
+        if (entity == null) {
+            return null;
+        }
+        return Pa<<Domain>>.builder()
+                .<<pkField>>(entity.get<<PkField>>())
+                <<BLOCK:PA_FROM_ENTITY>>
+                .build();
+    }
+}

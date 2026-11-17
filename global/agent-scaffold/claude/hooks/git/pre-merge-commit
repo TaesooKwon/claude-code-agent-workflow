@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# git pre-merge-commit(층 A) — git merge 가 만드는 병합 커밋을 디스패처(같은 디렉터리의 pre-commit)의 병합 모드로 넘긴다.
+# 병합 모드에서 도는 게이트·그 이유는 디스패처 머리말이 정본이다.
+exec bash "$(dirname "$0")/pre-commit" --merge
+# ↓ 본문 끝 표지 — 반드시 마지막 줄로 둔다(install-git-hooks.sh 가 빈 파일·잘린 본문을 이 줄 유무로 가린다).
+# claude-layer-a-body-end v1

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{comn/site/layout/cmsSubLayout}">
+<head>
+    <meta charset="UTF-8">
+    <title><<KOR>> 등록/수정</title>
+</head>
+<body>
+<th:block layout:fragment="content">
+    <div class="content">
+        <header class="page-header">
+            <div class="page-header__content">
+                <h2 class="page-header__tit" th:text="${title}"><<KOR>> 등록</h2>
+            </div>
+        </header>
+        <div class="pannel">
+            <form th:object="${<<domain>>}"
+                  id="<<domain>>RegForm"
+                  method="post"
+                  th:action="${actionMode == 'I'} ? @{/<<module>>/<<pkg>>/create<<Domain>>.json} : @{/<<module>>/<<pkg>>/modify<<Domain>>.json}">
+                <input type="hidden" name="actionMode" th:value="${actionMode}">
+                <input type="hidden" th:field="*{<<pkField>>}">
+<<IF:SITE>>
+                <input type="hidden" th:field="*{siteIdntfNo}">
+<<ENDIF:SITE>>
+
+                <div class="tbl-form">
+                    <table>
+                        <caption><<KOR>> 등록/수정 폼</caption>
+                        <colgroup>
+                            <col style="width: 16rem">
+                            <col>
+                        </colgroup>
+                        <tbody>
+                        <<BLOCK:FORM_ROWS>>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="btn-page">
+                    <div class="btn-page__area">
+                        <button type="submit" class="btn primary lg" th:if="${actionMode == 'I'}">등록</button>
+                        <button type="submit" class="btn primary lg" th:if="${actionMode != 'I'}">수정</button>
+                        <a th:href="@{/<<module>>/<<pkg>>/read<<Domain>>.do}" class="btn lg">목록</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</th:block>
+
+<th:block layout:fragment="script">
+    <script th:src="@{/resources/js/cms/<<module>>/<<pkg>>/<<domain>>Reg.js}"></script>
+</th:block>
+</body>
+</html>

@@ -1,0 +1,16 @@
+# 머신 고유값·시크릿 — 커밋 금지(.example만 커밋)
+machine.env
+
+# 설치 부산물
+*.bak-*
+*.from-kit-*
+*.log
+
+# node
+node_modules/
+.DS_Store
+
+# standard-db-naming: 원본 xlsx 사전은 프로젝트 고유라 커밋하지 않는다(assets/ 에 직접 둔다). sqlite 는 빌드 산출물(build_dictionary_db.py 로 생성)
+global/skills/standard-db-naming/**/*.sqlite
+global/skills/standard-db-naming/**/__pycache__/
+global/skills/standard-db-naming/assets/*.xlsx

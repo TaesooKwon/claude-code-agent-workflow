@@ -1,0 +1,36 @@
+# ── Local-only AI scaffolding (Claude Code 등) ── 팀 공유 .gitignore 를 더럽히지
+#    않으려고 여기(이 clone 전용, 커밋 안 됨)에 둔다. 다른 머신/재clone 시 재설정 필요.
+CLAUDE.md
+.mcp.json
+.claude/
+docs/agent_history.md
+docs/harness.md
+docs/agent_history.backup-*.md
+# claude-code-runtime
+**/.claude/scheduled_tasks.lock
+**/.claude/scheduled_tasks.json
+**/.claude/routines/.state/
+**/.claude/worktrees/
+**/.claude/checkpoints/
+**/.claude/mailbox/
+**/.claude/agent-registry.json
+**/.claude/agent-memory-local
+**/.claude/first-run
+**/.claude/assistant-daemon-state.json
+
+# ── Local research/runtime artifacts (커밋 안 함, 이 clone 전용) ──
+docs/verify-shots/
+.DS_Store
+
+# 로컬 전용 SQL 초안(커밋 금지) — 프로젝트 DB 문서 경로로 교체
+<<<DB_DOC_DIR>>>/*.sql
+
+# ── 스택 공통 런타임 산출물(커밋 금지) ──
+# 업로드 저장 루트를 레포 밖으로 빼도, 과거 기동분·CWD 가 모듈일 때 다시 생긴다.
+*/files/
+files/
+# Redis 로컬 스냅샷(캐시 등) — 기동 중 CWD 에 떨어진다.
+dump.rdb
+# log4j2 의 ${sys:LOG_PATH} 가 해석되지 않은 채 기동되면 그 이름의 디렉터리가 만들어진다.
+*/${sys:LOG_PATH}/
+${sys:LOG_PATH}/

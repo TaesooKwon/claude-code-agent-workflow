@@ -1,0 +1,211 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "mcp__{{DB_MCP}}__mysql_query",
+      "Bash"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(rm -fr *)",
+      "Bash(rm -r -f *)",
+      "Bash(rm -f -r *)",
+      "Bash(rm -Rf *)",
+      "Bash(rm -fR *)",
+      "Bash(rm -R -f *)",
+      "Bash(rm -f -R *)",
+      "Bash(rm --recursive *)",
+      "Bash(find * -delete*)",
+      "Bash(shred *)",
+      "Bash(git branch -D *)",
+      "Bash(sudo *)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)",
+      "Bash(git clean -*f*)",
+      "Bash(dd *)",
+      "Bash(mkfs*)",
+      "Bash(chmod -R 777*)",
+      "Bash(chown -R *)",
+      "Bash(shutdown*)",
+      "Bash(reboot*)",
+      "Bash(kill -9 *)",
+      "Bash(killall *)",
+      "Bash(truncate *)",
+      "Bash(* > /dev/sd*)",
+      "Bash(mysql *)",
+      "Bash(mysqldump *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/git-add-all-guard.sh\"",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/git-hook-bypass-guard.sh\"",
+            "timeout": 10,
+            "statusMessage": "git 훅 우회 가드: 층 A 를 건너뛰는 낱말 검사..."
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/git-hooks-installed-guard.sh\"",
+            "timeout": 15,
+            "statusMessage": "층 A 설치 가드: 미설치 레포의 커밋 차단..."
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/prod-db-guard.sh\"",
+            "timeout": 10,
+            "statusMessage": "운영 DB 가드: 직접 접속 호스트 검사..."
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/roundtrip-verify-reminder.sh\"",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/stale-app-verify-guard.sh\"",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/comment-selfcheck-reminder.sh\"",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/jsharness-commit-reminder.sh\"",
+            "timeout": 10,
+            "statusMessage": "jsharness 커밋 경고: 화면 JS 스펙 실행 기록 검사..."
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/text-constant-3layer-reminder.sh\"",
+            "timeout": 15,
+            "statusMessage": "문구 상수 3층 리마인더: 제거된 한글 리터럴 잔존 검사..."
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/profile-key-diff-guard.sh\"",
+            "timeout": 10,
+            "statusMessage": "프로파일 키 정합 가드: 3파일 키 차집합 검사..."
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/module-isolation-reminder.sh\"",
+            "timeout": 10,
+            "statusMessage": "모듈 격리 리마인더: web 모듈 레이어 검사..."
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/daily-first-session-fetch.sh\"",
+            "timeout": 20,
+            "statusMessage": "그날 첫 세션 팀 커밋 유입 감지(git fetch)..."
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/monthly-memory-hygiene.sh\"",
+            "timeout": 10,
+            "statusMessage": "월간 memory 위생 리마인더 검사..."
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/git-hooks-check.sh\"",
+            "timeout": 5,
+            "statusMessage": "층 A git 훅 설치 점검..."
+          }
+        ]
+      },
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/compact-state-reinject.sh\"",
+            "timeout": 10,
+            "statusMessage": "압축 후 커밋 게이트 상태 재주입..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/mirror-history.sh\"",
+            "timeout": 15,
+            "statusMessage": "history·memory 개인 백업 미러링..."
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/profile-key-diff-guard.sh\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/pull-smoke-reminder.sh\"",
+            "timeout": 10,
+            "statusMessage": "pull 스모크 리마인더: 팀 커밋 유입 검사..."
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/mvn-test-record.sh\"",
+            "timeout": 10,
+            "statusMessage": "mvn test 결과 기록: SUCCESS/FAILURE 저장..."
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/jsharness-record.sh\"",
+            "timeout": 10,
+            "statusMessage": "jsharness 결과 기록: Tests run·Failures 저장..."
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/mvn-test-record.sh\"",
+            "timeout": 10,
+            "statusMessage": "mvn test 결과 기록(실패 종료)..."
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/jsharness-record.sh\"",
+            "timeout": 10,
+            "statusMessage": "jsharness 결과 기록(실패 종료)..."
+          }
+        ]
+      }
+    ]
+  }
+}
