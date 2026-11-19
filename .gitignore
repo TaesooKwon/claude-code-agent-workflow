@@ -1,5 +1,6 @@
-# 머신 고유값·시크릿 — 커밋 금지(.example만 커밋)
+# 머신 고유값·시크릿 — 커밋 금지(.example만 커밋). .bak = init-machine-env.sh 가 덮어쓰기 전 남기는 사본
 machine.env
+machine.env.bak
 
 # 설치 부산물
 *.bak-*

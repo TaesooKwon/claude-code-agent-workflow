@@ -4,7 +4,7 @@
 #   전역 배포본 global/hooks 는 __HOME__·__PROJECTS_DIR__ 등 토큰이 박혀 직접 실행 불가라 픽스처로 부적합).
 #   [1~3] 가드 3종: 차단/통과 케이스 (픽스처 git 레포)
 #   [4] SessionStart 2종: 주입/침묵 (가짜 HOME·원격 behind 픽스처)
-#   [5] Stop 4종 등: 빈 입력 fail-open 스모크 (실알림 차단용 no-op curl/osascript 심)
+#   [5] 훅 빈 입력 fail-open 스모크
 #   [6] Stop 실판정: Hermes 폐쇄루프 block/pass(OR·AND·loop-guard) + 컨벤션 게이트 위반검출 (트랜스크립트 JSONL 픽스처)
 #   [7] commit-regress-reminder: 당일 1회 차단 후 통과
 #   [17] rules-size-check: 상한 초과 block · 당일 1회 · 오탐 금지 · 비프로젝트/홈 제외(스코프 무관 확인)
@@ -15,7 +15,6 @@
 #   [22] zsh-glob-quote-guard: 미인용 글롭 옵션값 경고 · 인용/이스케이프/heredoc/주석은 침묵
 #   [23] mvn-am-guard: -pl 단독 경고 · -am/--also-make · 리프 모듈 · 따옴표 안 · 비 mvn 은 침묵
 #   [24] git-hooks-installed-guard: 층 A 미설치·스크립트 부재·.git 없는 프로젝트의 커밋 deny(대상 레포 무관) · 설치 프로젝트·비커밋은 통과
-# 커버리지 한계(정직 고지): notify-done(알림 본문 조립)의 실판정은 스모크만.
 set -u
 KIT="$(cd "$(dirname "$0")" && pwd)"
 H="$KIT/test-fixtures/hooks"
@@ -25,10 +24,6 @@ trap 'case "$TMP" in /tmp/*|/private/tmp/*|/var/folders/*|/private/var/folders/*
 
 command -v jq >/dev/null 2>&1 || { echo "✗ jq 필요"; exit 1; }
 command -v git >/dev/null 2>&1 || { echo "✗ git 필요"; exit 1; }
-
-# Stop 스모크 중 실제 알림 발송 차단용 no-op 심
-mkdir -p "$TMP/bin"
-for c in curl osascript; do printf '#!/bin/sh\nexit 0\n' > "$TMP/bin/$c"; chmod +x "$TMP/bin/$c"; done
 
 decision() { jq -r '.hookSpecificOutput.permissionDecision // "allow"' 2>/dev/null; }
 json_cmd() { jq -n --arg c "$1" --arg d "$2" '{tool_input:{command:$c},cwd:$d}'; }
@@ -142,9 +137,9 @@ out=$(echo '{}' | CLAUDE_PROJECT_DIR="$TMP/clone" bash "$H/daily-first-session-f
 out=$(echo '{}' | CLAUDE_PROJECT_DIR="$FP" bash "$H/daily-first-session-fetch.sh" 2>/dev/null); rc=$?
 [ "$rc" = 0 ] && [ -z "$out" ] && ok "daily-fetch: 비git 프로젝트 → fail-open 침묵" || ng "daily-fetch: 비git fail-open 실패"
 
-echo "=== [5] Stop 4종 빈 입력 fail-open 스모크 (알림 심 적용) ==="
-for h in closed-loop-history convention-gate history-rotate-check notify-done mirror-history pull-smoke-reminder; do
-  echo '{}' | PATH="$TMP/bin:$PATH" HOME="$FH" CLAUDE_PROJECT_DIR="$FP" CLAUDE_PLUGIN_ROOT="$KIT/global" bash "$H/$h.sh" >/dev/null 2>&1
+echo "=== [5] 훅 빈 입력 fail-open 스모크 ==="
+for h in closed-loop-history convention-gate history-rotate-check mirror-history pull-smoke-reminder; do
+  echo '{}' | HOME="$FH" CLAUDE_PROJECT_DIR="$FP" CLAUDE_PLUGIN_ROOT="$KIT/global" bash "$H/$h.sh" >/dev/null 2>&1
   rc=$?
   [ "$rc" = 0 ] && ok "$h: 빈 입력 → exit 0(fail-open)" || ng "$h: 빈 입력에 exit $rc"
 done

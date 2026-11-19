@@ -26,7 +26,7 @@ for p in CLAUDE.md settings.json hooks skills/harness skills/bootstrap-project s
 done
 
 echo "=== [3] 훅 설치·실행권한 ==="
-for h in closed-loop-history.sh convention-gate.sh history-rotate-check.sh notify-done.sh; do
+for h in closed-loop-history.sh convention-gate.sh history-rotate-check.sh; do
   f="$DEST/hooks/$h"
   if [ -f "$f" ]; then [ -x "$f" ] && ok "$h (+x)" || bad "$h 실행권한 없음 (chmod +x)"; else bad "$h 미설치"; fi
 done
@@ -35,8 +35,8 @@ echo "=== [4] Stop 훅 등록(settings.json) ==="
 # 킷의 핵심 강제층이라 미등록 = 실패(경고 아님) — "doctor는 괜찮다는데 훅이 죽어있음"을 차단.
 if [ -f "$DEST/settings.json" ] && command -v jq >/dev/null 2>&1; then
   reg="$(jq -r '[.hooks.Stop[]?.hooks[]?.command] | join(" ")' "$DEST/settings.json" 2>/dev/null)"
-  for h in closed-loop-history convention-gate history-rotate-check notify-done; do
-    printf '%s' "$reg" | grep -q "$h" && ok "Stop 등록: $h" || bad "Stop 미등록: $h (bootstrap-machine.sh 재실행 → settings.json hooks.Stop 병합)"
+  for h in closed-loop-history convention-gate history-rotate-check; do
+    printf '%s' "$reg" | grep -q "$h" && ok "Stop 등록: $h" || bad "Stop 미등록: $h (bootstrap-machine.sh 재실행 → settings.json hooks.Stop 을 킷 것으로 교체 — 라이브에만 있는 Stop 원소는 사라진다, 백업 .bak-<시각>)"
   done
 elif [ ! -f "$DEST/settings.json" ]; then bad "settings.json 없음 — bootstrap-machine.sh 실행 필요"
 else warn "jq 없음 — Stop 등록 확인 불가"; fi
@@ -52,7 +52,7 @@ if [ -n "$drift" ]; then warn "훅/settings 내용에 현재 홈($HOME)과 다�
 # 머신 토큰 잔존 — 치환이 빠진 설치본은 경로가 `__HOME__/…` 로 남아 훅·스킬이 조용히 무기능이 된다.
 # 토큰 목록 = bootstrap-machine.sh 의 sed 치환 대상(허용 목록 — 새 토큰을 더하면 여기도 더한다).
 # 테스트(*.test.sh)는 토큰을 픽스처로 일부러 쓰므로 뺀다. 백업(.bak-*)·로그도 뺀다.
-tok="$(grep -rlE --exclude='*.test.sh' --exclude='*.bak*' --exclude='*.log' '__(HOME|PROJECTS_DIR|STRICT_PROJECT|MAVEN_REPO|AGENT_REPOS|NTFY_TOPIC)__' \
+tok="$(grep -rlE --exclude='*.test.sh' --exclude='*.bak*' --exclude='*.log' '__(HOME|PROJECTS_DIR|STRICT_PROJECT|MAVEN_REPO|AGENT_REPOS)__' \
   "$DEST/hooks" "$DEST/skills" "$DEST/agent-scaffold" "$DEST/agents" "$DEST/CLAUDE.md" "$DEST/settings.json" 2>/dev/null || true)"
 if [ -n "$tok" ]; then warn "미치환 머신 토큰 잔존 $(printf '%s\n' "$tok" | grep -c .)개 파일: $(printf '%s' "$tok" | head -5 | tr '\n' ' ') — machine.env 확인 후 bootstrap-machine.sh 재실행"; else ok "머신 토큰 치환 정합"; fi
 # statusline node 경로 유효성(있으면)
@@ -101,7 +101,7 @@ for rel in hooks agent-scaffold skills agents; do
     if [ ! -f "$lf" ]; then drift_list="$drift_list $rel/$rp(라이브없음)"; continue; fi
     if grep -Iq . "$kf" 2>/dev/null; then
       LC_ALL=C sed -e "s|__HOME__|$HOME|g" -e "s|__PROJECTS_DIR__|${PROJECTS_DIR:-}|g" \
-        -e "s|__NTFY_TOPIC__|${NTFY_TOPIC:-}|g" -e "s|__STRICT_PROJECT__|${STRICT_PROJECT:-}|g" \
+        -e "s|__STRICT_PROJECT__|${STRICT_PROJECT:-}|g" \
         -e "s|__AGENT_REPOS__|$AGENT_REPOS_SED|g" "$kf" \
         | cmp -s - "$lf" || drift_list="$drift_list $rel/$rp"
     else

@@ -45,7 +45,7 @@
 - **무관 dirty 파일 미수정.**
 - **차단형 훅의 우회는 셸 변수 대입 1회용**(의도적일 때만, 쓰면 사용자에게 말한다) — 이 킷이 설치하는 차단형 훅·층 A 훅(`hooks/git/`)이 읽는 우회 변수 모집단 = `grep -rhoE 'ALLOW_[A-Z_]+' --exclude='*.test.sh' .claude/hooks | sort -u`(`ALLOW_GIT_PUSH` 는 전역 `git-push-guard` 와 층 A pre-push 가 함께 읽는다). 전역 훅 몫(`ALLOW_WRITE_OVERWRITE` 등)은 전역 규약이 가진다. 커밋 게이트는 git 훅이 실제 환경변수를 읽는다 — 대상 `git` 명령 앞 대입(`ALLOW_X=1 git commit …`)으로 주고, 따옴표·메시지 안 문구·내보내지 않은 셸 변수(`ALLOW_X=1 && git …`)는 무효.
 - **최소주의의 하한선:** ①트러스트 경계 입력검증 ②데이터 손실 방지 에러처리(경합 포함 — 폴링·동시 저장·상태전이·채번은 두 컨텍스트 동시 조작 E2E 필수) ③보안(운영DB 가드·시크릿·인가) ④접근성 ⑤명시 요청 기능 — 절대 생략·축소 금지. 지름길은 `// ponytail: <한계> / <업그레이드 경로>`(남발 금지), 장부 = `bash .claude/scripts/ponytail-debt.sh`.
-- **변경 후 요약**(파일 목록 + 검증 결과). 완료 알림 상태줄: 실질 작업 턴 마지막 줄에 `🔔 <대상> <한 일> <상태>. <다음>.`(프로젝트명 금지 — 전역 Stop 훅 `notify-done.sh` 가 접두, 잡담 턴엔 생략).
+- **변경 후 요약**(파일 목록 + 검증 결과).
 - **커밋 = 현재 브랜치(기본 브랜치라도 분기 금지 — 전역 하네스 오버라이드), 사용자 요청 시만.** <<< trunk 기반이 아니면 삭제 >>> 푸시 = 사용자 전담(실행·언급·기록 금지, 해시까지만 보고). 작업 귀속 판정에 `git diff --diff-filter=A` 금지(`git log --author`/`git blame`).
 - **커밋·푸시 게이트 = git 훅(층 A · 에이전트 세션 = `CLAUDECODE=1` 일 때만):** `.git/hooks/pre-commit`·`pre-merge-commit` 스텁이 `.claude/hooks/git/` 디스패처를 불러 secret·sql·test-count·mvn·리뷰 마커 게이트를 실제 커밋 내용(경로 지정·`add && commit`·`-a` 포함)에 돌리고 `pre-push` 가 푸시를 막는다. 설치·점검 = `bash .claude/scripts/install-git-hooks.sh [--check]`(미설치는 SessionStart `git-hooks-check.sh` 가 경고 — 경고가 뜨면 커밋 전에 사용자에게 알린다). `--no-verify`·`core.hooksPath`·`-c alias.`·`commit -n` 은 훅 `git-hook-bypass-guard.sh` 가 차단. 층 A 미설치·무효 레포의 에이전트 커밋은 훅 `git-hooks-installed-guard.sh` 가 막는다(fail-closed — 설치·`--check` rc 0 뒤 풀린다). 한계(cherry-pick·revert·rebase·am·저수준 커밋 생성 미경유, 층 A 미설치 다른 레포 대상 커밋, 문자열 가드 우회형) = 디스패처 머리말 `ponytail:` 줄.
 

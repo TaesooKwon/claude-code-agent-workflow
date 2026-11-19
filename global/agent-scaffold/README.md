@@ -55,6 +55,5 @@ EXAMPLE_REPO에서 정립한 에이전트 구성(규약·훅·런북·격리·�
 
 ## 계층 구분
 - **전역(이미 공유):** `~/.claude/skills/{harness,playwright-verify}`, `~/.claude/hooks/*`, `~/.claude/CLAUDE.md` → 새 레포에서 자동 적용, 이식 불필요.
-  - 완료 알림: 전역 Stop 훅 `~/.claude/hooks/notify-done.sh`(맥 배너+소리 + 폰 ntfy 푸시)가 **모든 레포에서 자동 발화**(프로젝트명=cwd basename 자동). CLAUDE.md.tmpl의 "완료 알림 상태줄" 규약이 알림 본문을 `[프로젝트명] <문장>`으로 채운다. 새 **머신**을 셋업할 때만 이 전역 훅 + `~/.claude/settings.json` Stop 등록 + 개인 ntfy 토픽(`NTFY_TOPIC`)을 함께 옮기면 된다(레포 부트스트랩 범위 밖).
 - **레포별(이 템플릿):** 위 구성 파일들.
 - **프로젝트 고유(격리):** memory·도메인값·DB 스킬.

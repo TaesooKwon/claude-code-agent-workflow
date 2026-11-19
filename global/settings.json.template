@@ -113,17 +113,6 @@
             "statusMessage": "상시 로드 규약 크기 확인 중"
           }
         ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "__HOME__/.claude/hooks/notify-done.sh",
-            "timeout": 10,
-            "statusMessage": "완료 알림 발송 중",
-            "async": true
-          }
-        ]
       }
     ],
     "PreToolUse": [

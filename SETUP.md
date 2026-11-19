@@ -57,9 +57,8 @@ cd ~/claude-agent-kit
 **자동(권장)** — `init-machine-env.sh`가 이 머신을 파악해 채운다(PROJECTS_DIR·MAVEN_REPO 감지, STRICT_PROJECT 비움):
 
 ```bash
-./init-machine-env.sh                    # ntfy 새 토픽 생성(폰 재구독 필요)
-# ./init-machine-env.sh --ntfy=<기존토픽>  # 폰 알림 토픽 재사용(재구독 불필요)
-# ./init-machine-env.sh --no-ntfy         # 폰 알림 없이 맥 배너만
+./init-machine-env.sh                    # 자동 감지
+# ./init-machine-env.sh --projects=<경로>  # PROJECTS_DIR 직접 지정
 ```
 
 출력된 값을 확인하고 필요하면 손수 수정한다. (Claude Code에게 "새 PC에서 machine.env 파악해서 채워줘"라고 해도 이 스크립트를 돌려준다.)
@@ -76,14 +75,13 @@ vi machine.env
 | 변수 | 의미 | 기본/권장 |
 |---|---|---|
 | `PROJECTS_DIR` | 레포들이 모인 루트 디렉터리. 훅의 스코프 판정에 쓰임. | `$HOME/projects` (실제 작업 디렉터리로) |
-| `NTFY_TOPIC` | 완료 알림 ntfy 토픽(폰 푸시). 비우면 폰 알림 없이 맥 배너만. 폰 앱에서 **같은 토픽 구독** 필요(8절). 설치 시 키체인(서비스 `ntfy-topic`)에 등록되고 훅은 거기서 읽는다(파일에 토픽 없음). | 랜덤 문자열 |
 | `STRICT_PROJECT` | 폐쇄루프 2채널(history AND memory) 강제를 걸 프로젝트명(정확히 일치). 비우면 전 프로젝트 OR 모드(history 또는 memory 하나면 통과). | **비움 권장**(새 머신 기본) |
 | `MAVEN_REPO` | (선택) maven 오프라인 로컬 저장소. eGov 오프라인 빌드용. 없으면 doctor가 경고만. | `$HOME/maven_repo/maven/repository` |
 | `AGENT_REPOS` | 하네스·E2E 대상 레포 허용목록(harness 스킬 "대상" 줄에 치환). 값에 백틱이 있으면 **작은따옴표로 감싼다**. 비우면 안내 문구가 설치된다. `init-machine-env.sh` 를 다시 돌려도 기존 줄을 보존한다. | `` '`repoA`·`repoB`' `` |
 
 ## 4. bootstrap-machine.sh 실행
 
-`global/` 자산을 `machine.env` 값으로 **토큰 치환**(`__HOME__`·`__PROJECTS_DIR__`·`__NTFY_TOPIC__`·`__STRICT_PROJECT__`·`__MAVEN_REPO__`·`__AGENT_REPOS__`)해 `~/.claude/`로 설치한다. **멱등**(내용 다를 때만 `.bak-<날짜>` 백업 후 덮어씀).
+`global/` 자산을 `machine.env` 값으로 **토큰 치환**(`__HOME__`·`__PROJECTS_DIR__`·`__STRICT_PROJECT__`·`__MAVEN_REPO__`·`__AGENT_REPOS__`)해 `~/.claude/`로 설치한다. **멱등**(내용 다를 때만 `.bak-<날짜>` 백업 후 덮어씀).
 
 ```bash
 ./bootstrap-machine.sh --dry-run    # 무엇이 설치되는지 먼저 확인(권장)
@@ -92,7 +90,7 @@ vi machine.env
 
 설치되는 것:
 
-- `~/.claude/hooks/*.sh` — `global/hooks/` 의 훅 전부(설치 후 `+x`). 그중 `settings.json` 에 자동 등록되는 것은 템플릿의 Stop 훅 5종(핵심 4종 + `rules-size-check`)이다(아래 settings 항목)
+- `~/.claude/hooks/*.sh` — `global/hooks/` 의 훅 전부(설치 후 `+x`). 그중 `settings.json` 에 자동 등록되는 것은 템플릿의 Stop 훅(목록 = 템플릿 `hooks.Stop`)이다(아래 settings 항목)
 - `~/.claude/skills/` — `global/skills/` 의 스킬 전부(파일별 치환 설치)
 - `~/.claude/agent-scaffold/` — 새 레포 부트스트랩용 스캐폴드
 - `~/.claude/agents/` — 에이전트 정의(있으면)
@@ -111,8 +109,8 @@ vi machine.env
 
 1. **의존 프로그램** — `jq`/`python3`/`git` 없으면 **✗ 실패**, `node`/`mvn` 없으면 ⚠ 경고.
 2. **전역 자산 설치** — `CLAUDE.md`·`settings.json`·`hooks`·`skills/harness`·`skills/bootstrap-project`·`agent-scaffold` 존재.
-3. **훅 설치·실행권한** — 4종(`closed-loop-history`·`convention-gate`·`history-rotate-check`·`notify-done`)의 파일+`+x`.
-4. **Stop 훅 등록** — `settings.json`의 `hooks.Stop`에 핵심 4종이 등록됐는지. **미등록이면 ✗ 실패**(킷의 핵심 강제층이라 "doctor는 괜찮다는데 훅이 죽어있음"을 차단 → bootstrap 재실행으로 Stop 교체).
+3. **훅 설치·실행권한** — 킷 핵심 Stop 훅(`closed-loop-history`·`convention-gate`·`history-rotate-check`)의 파일+`+x`.
+4. **Stop 훅 등록** — `settings.json`의 `hooks.Stop`에 [3]의 핵심 훅이 등록됐는지. **미등록이면 ✗ 실패**(킷의 핵심 강제층이라 "doctor는 괜찮다는데 훅이 죽어있음"을 차단 → bootstrap 재실행으로 Stop 교체).
 5. **경로 드리프트** — 훅/settings **내용**에 현재 홈(`$HOME`)과 다른 절대경로(예: 이전 사용자 `/Users/olduser/…`)가 박혀있지 않은지, statusline node 경로 유효성.
    - **5b. settings.json 키 드리프트** — 라이브 top-level 키가 킷 템플릿에 있는지, 이벤트별 훅 등록 집합이 같은지(⚠ — `kit-drift-exclude.txt` 의 `hooks/` 줄은 뺀다).
    - **5c. 내용 드리프트** — `hooks`·`agent-scaffold`·`skills`·`agents` 를 토큰 치환 후 라이브와 대조, 라이브에만 있는 전역 훅 역방향 검출(⚠).
@@ -152,18 +150,10 @@ vi machine.env
 - **MCP DB 서버** — 회사 dev/운영 DB MCP는 접속정보·시크릿이라 킷에 없음. 템플릿 `enabledMcpjsonServers`엔 `__PROJECT__-dev-db` 플레이스홀더만 있으니 새 환경에서 실제 서버명으로 교체. 운영 DB MCP 는 `enabledMcpjsonServers` 에 넣지 않고(세션 시작 때 승인 질문), 템플릿 `permissions.ask` 와 `destructive-cmd-ask.sh`(훅 `case` 분기·settings matcher)의 `__PROJECT__-real-db` 플레이스홀더를 실제 운영 서버명으로 바꾼다(접속정보는 각 프로젝트 `.mcp.json`을 `bootstrap-project`로 배선, 비번은 env-var/`machine.env`).
 - **전역 MCP(context7)** — 시크릿 없는 공용 문서조회 MCP. 새 머신에서 한 번 등록: `claude mcp add context7 -- npx -y @upstash/context7-mcp`.
 - **`settings.local.json`(머신 로컬 override)** — 킷 `global/settings.local.json.example` 참고해 `~/.claude/settings.local.json`으로 복사(프로젝트별 임시 허용 등, 커밋 안 됨).
-- **전역 완료알림 훅 세부** — `notify-done.sh`는 설치되지만, 폰 푸시는 8절 ntfy 구독이 있어야 실제로 온다(없으면 맥 배너만).
 
-## 8. 폰 알림 — ntfy 구독
+## 8. 완료 알림 (은퇴)
 
-완료 알림을 폰으로 받으려면 ntfy 앱에서 `NTFY_TOPIC` 구독.
-
-1. 폰에 **ntfy** 앱 설치(App Store / Play Store).
-2. `machine.env`의 `NTFY_TOPIC`과 **똑같은 토픽**을 앱에서 Subscribe.
-3. 이후 실질 작업 턴 종료 시 `notify-done.sh`가 그 토픽으로 푸시(`[프로젝트명] <🔔 상태줄>` — 상태줄이 없으면 고정 문구, 응답 자동 요약은 맥 배너에만).
-4. 토픽은 `bootstrap-machine.sh`가 키체인(서비스 `ntfy-topic`)에 등록한다. 나중에 바꾸려면: `security add-generic-password -U -a "$USER" -s ntfy-topic -w <토픽>`.
-
-`NTFY_TOPIC`이 비어있고 키체인 항목도 없으면 폰 알림은 없고 맥 배너만 뜬다.
+2026-11-19 은퇴 — 킷은 완료 알림을 내지 않는다. 이전에 설치한 머신은 `~/.claude/settings.json` 의 `hooks.Stop` 에서 `notify-done` 등록을 먼저 빼고(jq 로 그 원소만 삭제 — `bootstrap-machine.sh` 재실행은 라이브에만 있는 Stop 원소까지 지운다) 그다음 `~/.claude/hooks/notify-done.sh`·`notify-done.test.sh` 를 지운다. 완료 알림이 필요하면 Claude Code 내장 알림(`preferredNotifChannel`)이나 Paseo 앱 푸시를 쓴다.
 
 ## 9. 새 프로젝트에 적용
 

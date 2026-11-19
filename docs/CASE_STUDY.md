@@ -37,7 +37,7 @@ AI 에이전트는 빠르지만, 레거시 프로젝트에서는 다음이 반�
   → [`closed-loop-history.sh`](../global/hooks/closed-loop-history.sh)
 - **이식성.** 머신 고유값은 토큰으로 비워 두고 설치 시 치환한다. 대상 레포의 스택(빌드툴·Java 버전·모듈 구조)을 판정해 룰을 켜고 끈다.
   → [`bootstrap-machine.sh`](../bootstrap-machine.sh), [`analyze-stack.sh`](../analyze-stack.sh), [`doctor.sh`](../doctor.sh)
-- **훅 자체의 회귀 테스트.** 차단/통과·주입/침묵·fail-open 을 픽스처 레포에서 실제로 돌려 검증한다(168건).
+- **훅 자체의 회귀 테스트.** 차단/통과·주입/침묵·fail-open 을 픽스처 레포에서 실제로 돌려 검증한다(167건).
   → [`test-hooks.sh`](../test-hooks.sh)
 
 ## 4. 실측 결과

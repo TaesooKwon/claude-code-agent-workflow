@@ -17,7 +17,7 @@
 - **리뷰 무게는 diff 크기가 아니라 성격에 비례한다.** staged diff 를 기계적으로 A/B 티어로 나눠, 실행 의미가 바뀐 변경에만 다각 리뷰를 건다(§5).
 - **에이전트의 "확인했다"를 믿지 않는다.** 커밋 게이트·리뷰 마커·지문 대조·테스트 반증검사(일부러 깨뜨려 빨간불 확인)를 훅으로 강제한다.
 - **상시 로드 토큰은 고정비다.** 규약엔 규칙만, 근거·사례는 `global/rules-rationale/` 로 밀어낸다(§9).
-- 훅 동작은 `./test-hooks.sh` 회귀 테스트(168건)로 검증한다.
+- 훅 동작은 `./test-hooks.sh` 회귀 테스트(167건)로 검증한다.
 
 ## 왜 있나
 
@@ -32,7 +32,7 @@
 git clone https://github.com/TaesooKwon/claude-code-agent-workflow ~/claude-agent-kit && cd ~/claude-agent-kit
 
 # 2) machine.env 자동 생성 (머신 파악 — PROJECTS_DIR·MAVEN_REPO 감지)
-./init-machine-env.sh --ntfy=<기존_ntfy_토픽>   # 폰 알림 재사용. 새로 만들려면 옵션 생략, 안 쓰면 --no-ntfy
+./init-machine-env.sh
 
 # 3) 전역 레이어 설치 (~/.claude/로 토큰치환 설치)
 ./bootstrap-machine.sh
@@ -41,7 +41,7 @@ git clone https://github.com/TaesooKwon/claude-code-agent-workflow ~/claude-agen
 ./doctor.sh
 ```
 
-사람 판단이 필요한 건 **ntfy 토픽 하나**뿐(폰 구독과 짝이라 자동 불가). 나머지는 자동. Claude Code에게 "새 PC에서 machine.env 파악해서 채워줘"라고 해도 2)를 대신 돌려준다.
+출력된 값을 확인하고 필요하면 손수 고친다. Claude Code에게 "새 PC에서 machine.env 파악해서 채워줘"라고 해도 2)를 대신 돌려준다.
 
 이후 프로젝트마다: `./analyze-stack.sh <repo>` 로 스택 판정 → Claude Code에서 `/bootstrap-project`.
 
@@ -57,8 +57,8 @@ git clone https://github.com/TaesooKwon/claude-code-agent-workflow ~/claude-agen
 | `analyze-stack.sh` | 대상 레포 스택 감지(빌드툴·Java버전·단일/멀티모듈·프레임워크·테스트) → 프로파일 권고·룰 취사 |
 | `bootstrap-machine.sh` | `machine.env` 값으로 토큰 치환해 `global/` 자산을 `~/.claude/`로 설치(멱등·백업) |
 | `doctor.sh` | 의존·훅 등록·경로 드리프트 검진 |
-| `test-hooks.sh` | 훅 **동작** 회귀 테스트(168건) — 가드 차단/통과·SessionStart 주입/침묵·Stop 판정·fail-open 등 구간별 검사(doctor는 설치만, 이건 판정 로직) |
-| `init-machine-env.sh` | 새 머신에서 `machine.env` 자동 파악·생성(PROJECTS_DIR·MAVEN_REPO 감지, ntfy만 선택) |
+| `test-hooks.sh` | 훅 **동작** 회귀 테스트(167건) — 가드 차단/통과·SessionStart 주입/침묵·Stop 판정·fail-open 등 구간별 검사(doctor는 설치만, 이건 판정 로직) |
+| `init-machine-env.sh` | 새 머신에서 `machine.env` 자동 파악·생성(PROJECTS_DIR·MAVEN_REPO 감지) |
 | `machine.env.example` | 머신 고유값 템플릿(실값은 `machine.env`로 gitignore) |
 | `test-kit-drift-check.sh` | 킷 ↔ 설치본 내용 드리프트 검사(`kit-drift-check.sh`) 회귀 테스트 |
 | `test-fixtures/hooks/` | `test-hooks.sh` 가 직접 실행하는 토큰 미치환 훅 사본 |
@@ -67,7 +67,7 @@ git clone https://github.com/TaesooKwon/claude-code-agent-workflow ~/claude-agen
 
 문서 속 `[[이름]]` 은 `global/rules-rationale/<이름>.md` 를 가리킨다. 그 폴더에 없는 이름은 비공개 원본의 개인 memory 링크라 이 스냅샷에는 없다.
 
-`global/` 안의 값은 토큰(`__HOME__`·`__PROJECTS_DIR__`·`__STRICT_PROJECT__`·`__MAVEN_REPO__`·`__AGENT_REPOS__`)으로 비워져 있고, `bootstrap-machine.sh`가 `machine.env`의 실값으로 치환해 설치한다. 폰 알림 토픽(`NTFY_TOPIC`)은 파일에 박지 않고 키체인(서비스 `ntfy-topic`)에 등록한다.
+`global/` 안의 값은 토큰(`__HOME__`·`__PROJECTS_DIR__`·`__STRICT_PROJECT__`·`__MAVEN_REPO__`·`__AGENT_REPOS__`)으로 비워져 있고, `bootstrap-machine.sh`가 `machine.env`의 실값으로 치환해 설치한다.
 
 ## 스택 적응
 
