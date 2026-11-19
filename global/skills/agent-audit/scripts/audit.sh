@@ -49,11 +49,22 @@ echo "--- [D] 프로젝트층 ---"
 # 관측 래퍼(hook-obs.sh)로 감싼 등록: 래퍼가 없거나 문법 오류면 등록 형태가 원 훅으로 폴백해 조용히 관측만 끊긴다
 # → 명령에 hook-obs.sh 가 있으면 래퍼 실존·bash -n 을 검사한다(같은 래퍼는 1회만 보고).
 WCHECKED=" "
+# 등록 명령 문자열의 홈 표기(${HOME}·${HOME-…}·${HOME:-…}·$HOME·~/)를 $HOME 값으로 펼치고 따옴표를 걷는다.
+# 문자열 치환만 한다(eval·명령 치환 금지 — settings 의 명령 원문은 실행하지 않는다).
+# 왜: 펼치지 않으면 "${HOME-}/x.sh"·"$HOME"/x.sh 의 경로 추출이 "/x.sh" 로 잘려 실존하는 훅을 ✗ 로 낸다.
+# ponytail: HOME 외 변수·공백 포함 경로는 해석하지 않는다(펼치지 못한 경로는 잘린 채 실존 검사된다) / 필요 시 셸 어휘분석으로 확장
+home_expand() {
+  local s="$1" m n=0 re='\$\{HOME(:?-[^}]*)?\}'
+  # 표기마다 전부 치환(//)하므로 반복은 서로 다른 표기 수만큼 돈다 — 상한은 $HOME 값 자체가 표기를 품은 경우의 무한 반복 차단.
+  while [ "$n" -lt 20 ] && [[ $s =~ $re ]]; do m="${BASH_REMATCH[0]}"; s="${s//"$m"/$HOME}"; n=$((n+1)); done
+  s="${s//\$HOME/$HOME}"; s="${s//\~\//$HOME/}"
+  s="${s//\"/}"; s="${s//\'/}"
+  printf '%s' "$s"
+}
 check_obs_wrapper() {
   case "$1" in *hook-obs.sh*) ;; *) return 0;; esac
   local w
-  w=$(printf '%s' "$1" | grep -oE '[^" ;=]*hook-obs\.sh' | head -1)
-  w="${w/#\~/$HOME}"; w="${w/#\$HOME/$HOME}"
+  w=$(home_expand "$1" | grep -oE '[^" ;=]*hook-obs\.sh' | head -1)
   case "$WCHECKED" in *" $w "*) return 0;; esac
   WCHECKED="$WCHECKED$w "
   if [ ! -f "$w" ]; then bad "관측 래퍼 없음: $w (등록 훅은 원 훅으로 폴백 — 관측 끊김)"
@@ -83,10 +94,9 @@ if [ -f "$GS" ] && command -v jq >/dev/null 2>&1; then
     [ -n "$c" ] || continue
     check_obs_wrapper "$c"
     # 대상 훅 = 마지막 절대경로 .sh 토큰 — 래퍼 등록 형태(…&& exec bash "$W" <훅> || exec <훅>)의 끝이 원 훅이다.
-    # $HOME·~ 를 먼저 펼쳐야 "$HOME/x.sh" 가 "/x.sh" 로 잘려 잡히지 않는다.
+    # 홈 표기를 먼저 펼친다(home_expand) — 인라인 셸 명령 안의 "${HOME-}/x.sh" 도 마지막 .sh 토큰이면 대상 훅으로 본다.
     # ponytail: 공백 포함 경로·인라인 셸 커맨드(.sh 없는 명령)는 미검사 / 필요 시 셸 어휘분석으로 확장
-    ce="${c//\$HOME/$HOME}"; ce="${ce//\~\//$HOME/}"
-    f=$(printf '%s' "$ce" | grep -oE '/[^" ;|&]+\.sh' | tail -1)
+    f=$(home_expand "$c" | grep -oE '/[^" ;|&]+\.sh' | tail -1)
     [ -n "$f" ] || continue
     gtotal=$((gtotal+1))
     if [ ! -f "$f" ]; then bad "전역 등록 훅 파일 없음: $f"; gmiss=1

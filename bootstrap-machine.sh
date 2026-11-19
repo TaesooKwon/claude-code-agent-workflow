@@ -2,7 +2,7 @@
 # bootstrap-machine.sh — 새(또는 재설정) 머신에 전역 에이전트 레이어를 설치한다.
 # 킷의 global/ 자산을 machine.env 값으로 토큰 치환해 ~/.claude/ 로 편다.
 #   토큰: __HOME__ → $HOME · __PROJECTS_DIR__ · __STRICT_PROJECT__ · __MAVEN_REPO__ · __AGENT_REPOS__
-# 안전: 기존 파일은 내용이 다를 때만 .bak-<날짜>로 백업 후 덮어씀(멱등). --dry-run 지원.
+# 안전: 기존 파일은 내용이 다를 때만 .bak-<시각>으로 백업 후 덮어씀(멱등). --dry-run 지원.
 #
 # 사용:
 #   cp machine.env.example machine.env && vi machine.env   # 머신 고유값 채우기

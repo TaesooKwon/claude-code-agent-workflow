@@ -90,4 +90,4 @@
 - **상시 로드 예산:** 정본 = 전역(규약엔 규칙 문장 + `[[포인터]]`, 서사는 memory, 축소는 사용자 승인 후 원문 아카이브로 유실 0 보장).
 - **월 1회 memory 위생 스윕**(SessionStart 훅 `monthly-memory-hygiene.sh` → `memory-hygiene` 스킬). 세팅 전면감사 = `agent-audit`.
 - **승격 사다리:** 경험(history)→교훈(memory)→절차(skill)→강제(hook). 반복 2회째 = `promotion-candidates` 마킹, 3회째 승격 검토.
-- **팀 md 동기화**(AGENTS.md·Design.md 존재 시만, 콘텐츠 앵커 비교, [UI] 충돌은 Design.md 우선). 이식 킷 반영 확인(범용 자산만 — 방법론·게이트·훅·스캐폴드 / 도메인값·DB·포트는 격리, 스크럽·grep 감사 후 커밋). 로컬 전용 격리: `CLAUDE.md`·`.claude/`·`docs/agent_*`·memory 는 `.git/info/exclude`(커밋 금지).
+- **팀 md 동기화**(AGENTS.md·Design.md 존재 시만, 콘텐츠 앵커 비교, [UI] 충돌은 Design.md 우선). 이식 킷 반영 확인(범용 자산만 — 방법론·게이트·훅·스캐폴드 / 도메인값·DB·포트는 격리, 스크럽·grep 감사 — 킷 반영은 킷 세션 몫: 킷 세션이 아니면 킷 반영 후보로 넘기고 사용자에게 보고). 로컬 전용 격리: `CLAUDE.md`·`.claude/`·`docs/agent_*`·memory 는 `.git/info/exclude`(커밋 금지).

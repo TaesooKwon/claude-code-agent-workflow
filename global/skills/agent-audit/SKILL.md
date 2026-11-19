@@ -22,10 +22,10 @@ bash ~/.claude/skills/agent-audit/scripts/audit.sh --fast     # 킷 doctor·test
 - **크로스 에이전트 마커:** `CLAUDE.md`에 상대(제미나이) 마커(`〔+Gemini …〕`) 유입분 검토·수용/보고.
 - **promotion-candidates:** 3회 도달 항목 승격 검토(스킬/훅), 처리분 라인 제거.
 - **memory 처분:** scan 리포트의 stale 마커·pending을 memory-hygiene SKILL §2 기준으로 처분.
-- **킷 미반영 자산:** 이번 감사에서 정착시킨 범용 자산의 킷 반영 여부(반영 시 스크럽·grep 감사 → 커밋+푸시).
+- **킷 미반영 자산:** 이번 감사에서 정착시킨 범용 자산의 킷 반영 여부(반영 시 스크럽·grep 감사 → 킷 반영은 킷 세션 몫: 킷 세션이 아니면 킷 반영 후보로 넘기고 사용자에게 보고 · push 는 사용자 지시).
 - **훅 로그 건강:** `~/.claude/hooks/*.log` tail로 BLOCK/PASS가 실제 찍히는지(죽은 훅 탐지).
 - **저발동 스킬·무발화 훅:** `scripts/skill-usage-report.sh [일수]`(호출 0 스킬) + `hook-obs-report.sh`(「은퇴 후보」 = block·ask·warn 0 이고 정책 강제≠기록·보조) → description 보강·은퇴 **후보로 제시만**(처분은 사용자). 월 1회는 `hook-events-retention.sh` 가 세션 시작에 상기한다. 안전 가드(운영 DB·푸시·시크릿)는 발동 0이어도 제외.
 
 ## 3. 마무리
 
-감사 결과(정합/조치 N건)를 memory(해당 정본 파일 갱신)와 `docs/agent_history.md`에 기록. 조치가 킷 자산이면 킷 커밋+푸시까지.
+감사 결과(정합/조치 N건)를 memory(해당 정본 파일 갱신)와 `docs/agent_history.md`에 기록. 조치가 킷 자산이면 킷 반영은 킷 세션 몫(킷 세션이 아니면 킷 반영 후보로 넘기고 사용자에게 보고 · push 는 사용자 지시).

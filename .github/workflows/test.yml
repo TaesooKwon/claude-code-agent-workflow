@@ -42,3 +42,8 @@ jobs:
         run: |
           bash global/skills/agent-audit/scripts/hook-policy-report.test.sh
           bash global/hooks/hook-events-retention.test.sh
+
+      - name: Pre-push hook syntax and tests
+        run: |
+          bash -n githooks/pre-push
+          bash githooks/pre-push.test.sh

@@ -259,6 +259,52 @@ else
   fi
 fi
 
+echo "=== [5e] 킷 push 검사 훅(githooks/pre-push) · 실명 목록 ==="
+# 경고만(FAIL 불변). hooksPath 는 원본 체크아웃 githooks 의 절대경로여야 한다 — 상대경로면 githooks 가 없는 worktree 에서
+#   훅을 못 찾아 무검사로 push 된다. 목록 파일 내용은 출력하지 않는다 — 판정 = 읽기(없음 / 있는데 못 읽음·유무 판정 불가)
+#   뒤 권한·형식(BOM·CR·빈 줄). 읽기 판정 짝 = githooks/pre-push 의 실명 목록 정제부(dir_blocked 포함).
+# ponytail: hooksPath 점검 대상 = $KIT_DIR 클론. 공개 레포(.public-snapshot) 클론의 hooksPath 는 보지 않는다 /
+#   업그레이드 = 공개 레포 경로 키를 machine.env 에 두고 아래 판정을 그 경로에도 반복
+if git -C "$KIT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
+  kcommon="$(cd "$KIT_DIR" && cd "$(git rev-parse --git-common-dir)" 2>/dev/null && pwd -P)"
+  want_hp="$(dirname "$kcommon")/githooks"
+  hp="$(git -C "$KIT_DIR" config --get core.hooksPath 2>/dev/null || true)"
+  case "$hp" in
+    "") warn "킷 core.hooksPath 미설정 — push 검사 없음(실명 목록 먼저 → git -C <원본> config core.hooksPath $want_hp)" ;;
+    /*) if [ "$(cd "$hp" 2>/dev/null && pwd -P)" = "$want_hp" ]; then ok "킷 core.hooksPath = 원본 체크아웃 githooks 절대경로"
+        else warn "킷 core.hooksPath($hp)가 원본 체크아웃 githooks($want_hp)가 아님"; fi ;;
+    *) warn "킷 core.hooksPath 가 상대경로($hp) — githooks 가 없는 worktree 에서 무검사 push(절대경로 $want_hp 로)" ;;
+  esac
+  if [ -f "$want_hp/pre-push" ]; then [ -x "$want_hp/pre-push" ] && ok "githooks/pre-push (+x)" || warn "githooks/pre-push 실행권한 없음(chmod +x)"
+  else warn "원본 체크아웃에 githooks/pre-push 없음($want_hp)"; fi
+else warn "킷이 git 체크아웃이 아님 — push 검사 훅 확인 생략"; fi
+SNF="${SCRUB_NAMES_FILE:-$DEST/scrub-names.txt}"
+dir_blocked() {  # $1 = 경로 → 가장 가까운 존재 조상이 탐색(x) 불가 디렉터리면 rc 0. 짝 = githooks/pre-push 의 같은 이름 함수
+  local d=$1 up
+  while up=$(dirname -- "$d") && [ "$up" != "$d" ]; do
+    d=$up
+    if [ -e "$d" ] || [ -L "$d" ]; then [ -d "$d" ] && [ ! -x "$d" ]; return; fi
+  done
+  return 1
+}
+if [ ! -e "$SNF" ] && [ ! -L "$SNF" ] && ! dir_blocked "$SNF"; then
+  warn "실명 목록 없음($SNF) — pre-push 실명 검사가 꺼진다(공개 레포는 push 차단)"
+elif [ ! -f "$SNF" ] || [ ! -r "$SNF" ]; then
+  warn "실명 목록을 읽을 수 없음($SNF) — pre-push 가 모든 push 를 차단(읽을 수 있는 일반 파일인지·상위 디렉터리 탐색 권한을 확인)"
+else
+  sp=$(stat -f %Lp "$SNF" 2>/dev/null || stat -c %a "$SNF" 2>/dev/null)
+  [ "$sp" = 600 ] && ok "실명 목록 권한 600" || warn "실명 목록 권한이 600 아님(${sp:-?}) — chmod 600 $SNF"
+  sfmt=""
+  [ "$(head -c 3 "$SNF" 2>/dev/null | od -An -tx1 | tr -d ' \n')" = efbbbf ] && sfmt="$sfmt BOM"
+  LC_ALL=C grep -q "$(printf '\r')" "$SNF" 2>/dev/null && sfmt="$sfmt CR"
+  LC_ALL=C grep -qE '^[[:space:]]*$' "$SNF" 2>/dev/null && sfmt="$sfmt 빈줄"
+  [ -s "$SNF" ] || sfmt="$sfmt 빈파일"
+  if ! sed -e "1s/^$(printf '\357\273\277')//" "$SNF" 2>/dev/null | tr -d '\r' | LC_ALL=C grep -q '[^[:space:]]'; then
+    warn "실명 목록이 비어 있음($SNF) — pre-push 실명 검사가 꺼진다(공개 레포는 push 차단)"
+  elif [ -z "$sfmt" ]; then ok "실명 목록 형식 정상(BOM·CR·빈 줄 없음)"
+  else warn "실명 목록 형식:${sfmt} — 훅은 정제해 쓰지만 원본을 정리하세요(한 줄에 하나)"; fi
+fi
+
 echo "=== [6] JVM 빌드 관문(선택) ==="
 if [ -n "${MAVEN_REPO:-}" ]; then :; else MAVEN_REPO="$HOME/maven_repo/maven/repository"; fi
 [ -d "$MAVEN_REPO" ] && ok "maven 로컬레포 존재($MAVEN_REPO)" || warn "maven 오프라인 레포 없음($MAVEN_REPO) — eGov 오프라인 빌드 시 필요(SETUP.md 참조)"

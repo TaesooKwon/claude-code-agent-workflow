@@ -81,7 +81,7 @@ vi machine.env
 
 ## 4. bootstrap-machine.sh 실행
 
-`global/` 자산을 `machine.env` 값으로 **토큰 치환**(`__HOME__`·`__PROJECTS_DIR__`·`__STRICT_PROJECT__`·`__MAVEN_REPO__`·`__AGENT_REPOS__`)해 `~/.claude/`로 설치한다. **멱등**(내용 다를 때만 `.bak-<날짜>` 백업 후 덮어씀).
+`global/` 자산을 `machine.env` 값으로 **토큰 치환**(`__HOME__`·`__PROJECTS_DIR__`·`__STRICT_PROJECT__`·`__MAVEN_REPO__`·`__AGENT_REPOS__`)해 `~/.claude/`로 설치한다. **멱등**(내용 다를 때만 `.bak-<시각>` 백업 후 덮어씀).
 
 ```bash
 ./bootstrap-machine.sh --dry-run    # 무엇이 설치되는지 먼저 확인(권장)
