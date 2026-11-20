@@ -259,12 +259,41 @@ else
   fi
 fi
 
-echo "=== [5e] 킷 push 검사 훅(githooks/pre-push) · 실명 목록 ==="
+echo "=== [5e] 운영 DB MCP 확인창(destructive-cmd-ask) 등록 · 킷 실명 반출 ==="
+# 훅 판정 = 서버명 규칙(소문자화해 -db 로 끝나고 개발 DB 접미사가 아니면 ask). 개발 DB 접미사 = 명시 목록(-dev-db·-devserver-db) —
+#   destructive-cmd-ask.sh 의 제거 목록과 아래 awk 를 함께 고친다. matcher 가 그 이름을 안 받으면 훅이 아예 안 돈다(무음 소실).
+# 대조 표본 = example-*-db 이름(실명 아님) — Claude Code matcher 를 정규식 전체일치로 근사해 jq test 로 본다.
+# ponytail: matcher 의 단순 문자열(정규식 아님) 판정 규칙은 근사 / 오판이 관측되면 Claude Code 의 matcher 판정 규칙으로 맞춘다.
+if [ -f "$DEST/settings.json" ] && command -v jq >/dev/null 2>&1; then
+  dm="$(jq -r '[.hooks.PreToolUse[]? | select(any(.hooks[]?; (.command // "") | test("destructive-cmd-ask\\.sh"))) | (.matcher // "")] | .[]' "$DEST/settings.json" 2>/dev/null)"
+  if [ -z "$dm" ]; then warn "destructive-cmd-ask 가 PreToolUse 에 등록돼 있지 않음 — 파괴 명령·운영 DB MCP 확인창 없음(bootstrap-machine.sh 재실행)"
+  else
+    miss="$(printf '%s\n' "$dm" | jq -Rr 'select(length > 0) as $m | ["Bash","mcp__example-real-db__q","mcp__example-prod-db__q","mcp__example-prd-db__q"] | map(select(test("^(" + $m + ")$") | not)) | .[]' 2>/dev/null | sort -u | tr '\n' ' ')"
+    [ -z "$miss" ] && ok "destructive-cmd-ask matcher 가 Bash·운영 DB MCP(-db 규칙) 를 받음" \
+      || warn "destructive-cmd-ask matcher 가 받지 않는 호출: ${miss}— 킷 matcher(Bash|mcp__.*-[Dd][Bb]__.*) 로 교체(bootstrap 의 matcher 교체 조건은 bootstrap-machine.sh 의 settings jq)"
+  fi
+else warn "settings.json/jq 없음 — destructive-cmd-ask 등록 확인 불가"; fi
+# 실명 반출 — 이 머신의 MCP 서버명 중 규칙상 운영 DB 인 이름이 킷(추적 + 미추적·무시 제외)에 있으면 경고. 이름만 다루고 접속정보는 읽지 않는다.
+if command -v jq >/dev/null 2>&1; then
+  pnames="$( { jq -r '.. | objects | .mcpServers? // empty | objects | keys[]' "$HOME/.claude.json" 2>/dev/null
+               for f in "${PROJECTS_DIR:-$HOME/projects}"/*/.mcp.json; do [ -f "$f" ] && jq -r '.mcpServers // {} | keys[]' "$f" 2>/dev/null; done; } \
+             | awk '{l=tolower($0); gsub(/-(dev|devserver)-db$/, "", l)} l ~ /-db$/' | sort -u)"
+  if [ -z "$pnames" ]; then ok "운영 DB MCP 서버명 없음(~/.claude.json·PROJECTS_DIR/*/.mcp.json) — 반출 검사 대상 없음"
+  else
+    if git -C "$KIT_DIR" rev-parse --git-dir >/dev/null 2>&1; then kfiles="$(cd "$KIT_DIR" && git ls-files -co --exclude-standard)"
+    else kfiles="$(cd "$KIT_DIR" && find . -type f ! -path './.git/*' ! -name machine.env)"; fi
+    leak="$(cd "$KIT_DIR" && printf '%s\n' "$kfiles" | tr '\n' '\0' | xargs -0 grep -IlF -e "$(printf '%s\n' "$pnames")" 2>/dev/null | tr '\n' ' ')"
+    [ -z "$leak" ] && ok "킷 실명 반출 0건(운영 DB 서버명 $(printf '%s\n' "$pnames" | grep -c .)개 대조)" \
+      || warn "킷에 운영 DB MCP 실명 잔존: ${leak}— example-* 로 바꾸거나 플레이스홀더로(실명 비반출)"
+  fi
+fi
+
+echo "=== [5f] 킷 push 검사 훅(githooks/pre-push) · 실명 목록 ==="
 # 경고만(FAIL 불변). hooksPath 는 원본 체크아웃 githooks 의 절대경로여야 한다 — 상대경로면 githooks 가 없는 worktree 에서
 #   훅을 못 찾아 무검사로 push 된다. 목록 파일 내용은 출력하지 않는다 — 판정 = 읽기(없음 / 있는데 못 읽음·유무 판정 불가)
 #   뒤 권한·형식(BOM·CR·빈 줄). 읽기 판정 짝 = githooks/pre-push 의 실명 목록 정제부(dir_blocked 포함).
-# ponytail: hooksPath 점검 대상 = $KIT_DIR 클론. 공개 레포(.public-snapshot) 클론의 hooksPath 는 보지 않는다 /
-#   업그레이드 = 공개 레포 경로 키를 machine.env 에 두고 아래 판정을 그 경로에도 반복
+# hooksPath 점검 대상 = $KIT_DIR 클론 + machine.env 의 PUBLIC_SNAPSHOT_DIR(공개 스냅샷 클론 — 비우면 확인 안 함 정보 줄).
+#   기준은 클론마다 그 클론 원본 체크아웃(git-common-dir 의 상위)의 githooks 절대경로다.
 if git -C "$KIT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
   kcommon="$(cd "$KIT_DIR" && cd "$(git rev-parse --git-common-dir)" 2>/dev/null && pwd -P)"
   want_hp="$(dirname "$kcommon")/githooks"
@@ -278,6 +307,27 @@ if git -C "$KIT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
   if [ -f "$want_hp/pre-push" ]; then [ -x "$want_hp/pre-push" ] && ok "githooks/pre-push (+x)" || warn "githooks/pre-push 실행권한 없음(chmod +x)"
   else warn "원본 체크아웃에 githooks/pre-push 없음($want_hp)"; fi
 else warn "킷이 git 체크아웃이 아님 — push 검사 훅 확인 생략"; fi
+_tl() {  # 표시용 — 홈 절대경로 앞부분을 ~ 로($HOME 과 그 물리 경로(pwd -P) 둘 다)
+  local tl='~' v ph; ph=$(cd "$HOME" 2>/dev/null && pwd -P) || ph=$HOME
+  v=${1/#"$HOME"/$tl}; printf '%s' "${v/#"$ph"/$tl}"
+}
+PSD="${PUBLIC_SNAPSHOT_DIR:-}"
+if [ -z "$PSD" ]; then ok "공개 스냅샷 클론 hooksPath 확인 안 함(정보) — machine.env 의 PUBLIC_SNAPSHOT_DIR 미설정"
+elif ! git -C "$PSD" rev-parse --git-dir >/dev/null 2>&1; then warn "PUBLIC_SNAPSHOT_DIR($(_tl "$PSD"))가 git 클론이 아님 — 경로를 확인"
+else
+  [ -e "$PSD/.public-snapshot" ] || warn "공개 스냅샷 클론($(_tl "$PSD")) 루트에 .public-snapshot 없음 — 공개 레포 경로가 맞는지 확인"
+  pcommon="$(cd "$PSD" && cd "$(git rev-parse --git-common-dir)" 2>/dev/null && pwd -P)"
+  pwant="$(dirname "$pcommon")/githooks"
+  php="$(git -C "$PSD" config --get core.hooksPath 2>/dev/null || true)"
+  case "$php" in
+    "") warn "공개 스냅샷 클론($(_tl "$PSD")) core.hooksPath 미설정 — push 검사 없음(실명 목록 먼저 → git -C <클론> config core.hooksPath $(_tl "$pwant"))" ;;
+    /*) if [ "$(cd "$php" 2>/dev/null && pwd -P)" = "$pwant" ]; then ok "공개 스냅샷 클론 core.hooksPath = 그 클론 원본 체크아웃 githooks 절대경로"
+        else warn "공개 스냅샷 클론 core.hooksPath($(_tl "$php"))가 그 클론 원본 체크아웃 githooks($(_tl "$pwant"))가 아님"; fi ;;
+    *) warn "공개 스냅샷 클론 core.hooksPath 가 상대경로($(_tl "$php")) — githooks 가 없는 worktree 에서 무검사 push(절대경로 $(_tl "$pwant") 로)" ;;
+  esac
+  if [ -f "$pwant/pre-push" ]; then [ -x "$pwant/pre-push" ] || warn "공개 스냅샷 클론 githooks/pre-push 실행권한 없음(chmod +x)"
+  else warn "공개 스냅샷 클론 원본 체크아웃에 githooks/pre-push 없음($(_tl "$pwant"))"; fi
+fi
 SNF="${SCRUB_NAMES_FILE:-$DEST/scrub-names.txt}"
 dir_blocked() {  # $1 = 경로 → 가장 가까운 존재 조상이 탐색(x) 불가 디렉터리면 rc 0. 짝 = githooks/pre-push 의 같은 이름 함수
   local d=$1 up
@@ -303,6 +353,33 @@ else
     warn "실명 목록이 비어 있음($SNF) — pre-push 실명 검사가 꺼진다(공개 레포는 push 차단)"
   elif [ -z "$sfmt" ]; then ok "실명 목록 형식 정상(BOM·CR·빈 줄 없음)"
   else warn "실명 목록 형식:${sfmt} — 훅은 정제해 쓰지만 원본을 정리하세요(한 줄에 하나)"; fi
+fi
+
+echo "=== [5g] 전역 deny 대조(라이브 vs 킷 템플릿 · 의도 차이 등록 = settings-deny-kit-only.txt) ==="
+# 경고만(FAIL 불변) · 읽기 전용. permissions.deny 가 문자열 배열이 아니면(키 없음·다른 형·JSON 깨짐) 판정 불가 경고.
+# 판정: 라이브에만 = 템플릿 반영 후보 / 템플릿에만 있고 미등록 = 등록 또는 라이브 반영 / 등록돼 있는데 템플릿에 없음 = 등록이 낡음.
+#   등록 = 이 사용자가 라이브에서 뺀 규칙 목록이다 — 등록 항목이 라이브·템플릿에 다 있으면(킷 기본값 그대로) 경고가 아니라 ✓ 정보 줄.
+# ponytail: 규칙을 줄 단위로 대조한다(개행이 든 deny 문자열은 쪼개진다) / 업그레이드 = jq 안에서 집합 연산
+DREG="$KIT_DIR/settings-deny-kit-only.txt"
+_deny() { jq -r 'if (.permissions.deny | type) == "array" and all(.permissions.deny[]; type == "string") then .permissions.deny[] else error("deny") end' "$1" 2>/dev/null; }
+_dl() { local l tl='~'; printf '%s\n' "$1" | while IFS= read -r l; do printf ' [%s]' "${l//"$HOME"/$tl}"; done; }   # 홈 절대경로는 ~ 로
+if ! command -v jq >/dev/null 2>&1; then warn "jq 없음 — 전역 deny 대조 판정 불가"
+elif [ ! -f "$DEST/settings.json" ]; then warn "라이브 settings.json 없음 — 전역 deny 대조 판정 불가"
+elif ! dlv="$(_deny "$DEST/settings.json")"; then warn "라이브 settings.json 의 permissions.deny 를 문자열 배열로 못 읽음(키 없음·형식·JSON) — 전역 deny 대조 판정 불가"
+elif ! dtv="$(_deny "$TMPL")"; then warn "킷 템플릿 permissions.deny 를 문자열 배열로 못 읽음 — 전역 deny 대조 판정 불가"
+elif [ ! -f "$DREG" ] || [ ! -r "$DREG" ]; then warn "의도 차이 등록 파일 없음·못 읽음(settings-deny-kit-only.txt) — 전역 deny 대조 판정 불가"
+else
+  dlv="$(printf '%s\n' "$dlv" | LC_ALL=C sort -u | grep -v '^$')"; dtv="$(printf '%s\n' "$dtv" | LC_ALL=C sort -u | grep -v '^$')"
+  drg="$(grep -v -e '^#' -e '^$' "$DREG" | LC_ALL=C sort -u)"
+  d_a="$(LC_ALL=C comm -23 <(printf '%s\n' "$dlv") <(printf '%s\n' "$dtv") | grep -v '^$')"
+  d_b="$(LC_ALL=C comm -13 <(printf '%s\n' "$dlv") <(printf '%s\n' "$dtv") | LC_ALL=C comm -23 - <(printf '%s\n' "$drg") | grep -v '^$')"
+  d_c="$(LC_ALL=C comm -12 <(printf '%s\n' "$drg") <(printf '%s\n' "$dlv") | LC_ALL=C comm -12 - <(printf '%s\n' "$dtv") | grep -v '^$')"
+  d_c2="$(LC_ALL=C comm -23 <(printf '%s\n' "$drg") <(printf '%s\n' "$dtv") | grep -v '^$')"
+  [ -n "$d_a" ] && warn "deny 라이브에만:$(_dl "$d_a") — 킷 템플릿(global/settings.json.template) 반영 후보"
+  [ -n "$d_b" ] && warn "deny 템플릿에만(의도 차이 미등록):$(_dl "$d_b") — 의도면 settings-deny-kit-only.txt 에 등록, 아니면 라이브에 반영"
+  [ -n "$d_c" ] && ok "등록된 의도 차이 중 이 머신 라이브에 있는 것:$(_dl "$d_c") — 킷 기본값 그대로(새 머신이면 정상)"
+  [ -n "$d_c2" ] && warn "deny 등록이 낡음(템플릿에 없음):$(_dl "$d_c2") — settings-deny-kit-only.txt 에서 삭제"
+  [ -z "$d_a$d_b$d_c2" ] && ok "전역 deny 정합(라이브 $(printf '%s\n' "$dlv" | grep -c .) · 템플릿 $(printf '%s\n' "$dtv" | grep -c .) · 등록된 의도 차이 $(printf '%s\n' "$drg" | grep -c .))"
 fi
 
 echo "=== [6] JVM 빌드 관문(선택) ==="

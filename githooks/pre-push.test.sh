@@ -8,7 +8,7 @@ KIT=$(cd "$HERE/.." && pwd)
 HOOK="$HERE/pre-push"
 GUARD_REL='global/agent-scaffold/claude/hooks/secret-commit-guard.sh'
 LIB_REL='global/agent-scaffold/claude/hooks/lib/git-cmd.sh'
-unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR CLAUDECODE
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR CLAUDECODE ALLOW_GIT_PUSH   # 에이전트 push 관문은 T24 에서만 켠다
 export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
 export GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@example.invalid GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@example.invalid
 export LC_ALL=C
@@ -107,7 +107,7 @@ new_repo t12b; cf n.txt "++ b/Zorblax"; expect_block "T12b +++ 꼴 내용 줄" "
 new_repo t12c; cf "docs/홍길동.md" clean; expect_block "T12c 한글 경로 실명" "경로에 실명" push origin main
 new_repo t12d; cf m.txt clean "fix for Zorblax"; expect_block "T12d 메시지 실명" "커밋 메시지에 실명" push origin main
 new_repo t12e; G tag -a v1 -m "Zorblax release"; expect_block "T12e annotated tag 메시지" "태그 메시지에 실명" push origin v1
-command grep -aqF 'git tag -d v1`' "$OUT" && pass || fail "T12e 태그 조치 줄(git tag -d v1) 없음"
+command grep -aqF "git tag -d 'v1'\`" "$OUT" && pass || fail "T12e 태그 조치 줄(git tag -d 'v1') 없음"
 G tag -a v2 -m "release"; expect_pass "T12f 깨끗한 annotated tag" push origin v2
 GIT_COMMITTER_NAME=Zorblax G tag -a v3 -m "release"; expect_pass "T12g tagger 만 실명(메시지 깨끗)" push origin v3
 G tag -a zorblax-v4 -m "Zorblax"; expect_block "T12h 태그 이름·메시지 실명(이름 미출력)" "태그 메시지에 실명" push origin zorblax-v4
@@ -160,7 +160,7 @@ expect_pass "T17b 덧붙인 경로의 jq" env PATH="$SHIM" PRE_PUSH_EXTRA_PATH="
 # T18 여러 ref push — 두 번째 ref 에만 시크릿
 new_repo t18; G checkout -qb a1; cf a.txt a; G checkout -qb b1 main; cf k.txt "$TOK"
 G checkout -q a1; expect_block "T18 여러 ref(현재 아닌 둘째만 시크릿)" "시크릿 패턴" push origin a1 b1
-command grep -aqF 'git switch b1`' "$OUT" && pass || fail "T18 조치 줄에 git switch b1 없음"
+command grep -aqF "git switch 'b1'\`" "$OUT" && pass || fail "T18 조치 줄에 git switch 'b1' 없음"
 # T19 remote sha 가 로컬에 없음 · T20 낯선 stdin
 new_repo t19; cf a.txt a; printf 'refs/heads/main %s refs/heads/main %s\n' "$(G rev-parse HEAD)" "$(printf '%040d' 7)" > "$ROOT/in19"
 expect_block "T19 원격 sha 로컬 부재" "fetch" bash "$HOOK" origin "$ROOT/t19.git" < "$ROOT/in19"
@@ -192,6 +192,47 @@ new_repo t23; G checkout -qb 'fix$(id)'; cf k.txt "$TOK"; expect_block "T23a 브
 qcheck "T23a git switch 인용" 'git switch' 'fix$(id)'
 G tag -a 't$(id)' -m "Zorblax"; expect_block "T23b 태그 이름에 \$(…)" "태그 메시지에 실명" push origin 'refs/tags/t$(id)'
 qcheck "T23b git tag -d 인용" 'git tag -d' 't$(id)'
+# T23c 한글 ref — 안내 명령에 UTF-8 이 그대로(작은따옴표 인용 리터럴), $'\…' 이스케이프 없음
+new_repo t23c; G checkout -qb '수정/한글'; cf k.txt "$TOK"; expect_block "T23c 한글 브랜치" "시크릿 패턴" push origin '수정/한글'
+command grep -aqF "\`git switch '수정/한글'\`" "$OUT" && pass || fail "T23c 한글 ref 리터럴 인용 없음"
+qcheck "T23c git switch 인용" 'git switch' '수정/한글'
+# T23d 원격 이름에 ' $ \` 공백 — 리터럴 인용 + eval 해도 명령 치환·변수 확장 없음(치환이 일어나면 표지 파일이 생긴다)
+RN="o'x \$HOME \`touch $ROOT/pwned1\` \$(touch $ROOT/pwned2)"
+cd "$ROOT/t19" || exit 1
+expect_block "T23d 특수문자 원격 이름" "fetch" bash "$HOOK" "$RN" "$ROOT/t19.git" < "$ROOT/in19"
+command grep -aqF "\`git fetch 'o'\\''x \$HOME \`touch $ROOT/pwned1\` \$(touch $ROOT/pwned2)'\` 후" "$OUT" && pass || fail "T23d 원격 이름 리터럴 인용 없음"
+a=$(sed -n 's/.*`git fetch \(.*\)` 후 다시.*/\1/p' "$OUT" | head -1)
+if [ -n "$a" ] && eval "set -- $a" && [ "$#" = 1 ] && [ "$1" = "$RN" ] && [ ! -e "$ROOT/pwned1" ] && [ ! -e "$ROOT/pwned2" ]; then pass
+else fail "T23d eval 결과 불일치 또는 치환 발생(인자 [$a])"; fi
+# 직접 호출 시험(T24~T26) — 원격 없는 로컬 레포에서 훅에 push 입력을 stdin 으로 넣는다(전송 명령은 치지 않는다).
+mklocal() {  # $1 = 이름 → 가드·lib·seed 커밋을 둔 로컬 레포로 cd
+  local r="$ROOT/$1"; G init -q -b main "$r" || exit 1; mkdir -p "$r/$(dirname "$LIB_REL")"
+  cp "$KIT/$GUARD_REL" "$r/$GUARD_REL" && cp "$KIT/$LIB_REL" "$r/$LIB_REL" || exit 1
+  echo seed > "$r/README"; G -C "$r" add -A && G -C "$r" commit -qm seed || exit 1; cd "$r" || exit 1
+}
+pin() { printf '%s %s %s %s\n' "$1" "$(G rev-parse "$2")" "$1" "$(G rev-parse "$3")" > "$ROOT/pin"; }   # $1 = ref, $2 = 로컬, $3 = 원격 기준
+# T24 에이전트 push 관문 — CLAUDECODE=1 이면 env ALLOW_GIT_PUSH 가 정확히 1 일 때만 기존 판정으로 간다
+mklocal t24; base=$(G rev-parse HEAD); cf a.txt a; clean=$(G rev-parse HEAD); cf k.txt "$TOK"; G tag tok24
+pin refs/heads/main "$clean" "$base"
+expect_block "T24a CLAUDECODE=1·토큰 없음" "사용자 전담" env CLAUDECODE=1 bash "$HOOK" origin "$ROOT/none.git" < "$ROOT/pin"
+expect_block "T24b CLAUDECODE=1·ALLOW_GIT_PUSH=true(1 아님)" "사용자 전담" env CLAUDECODE=1 ALLOW_GIT_PUSH=true bash "$HOOK" origin "$ROOT/none.git" < "$ROOT/pin"
+expect_pass "T24c CLAUDECODE=1·토큰 → 깨끗한 범위 통과" env CLAUDECODE=1 ALLOW_GIT_PUSH=1 bash "$HOOK" origin "$ROOT/none.git" < "$ROOT/pin"
+expect_pass "T24d CLAUDECODE 미설정 → 깨끗한 범위 통과" bash "$HOOK" origin "$ROOT/none.git" < "$ROOT/pin"
+expect_pass "T24e CLAUDECODE=0 → 관문 아님" env CLAUDECODE=0 bash "$HOOK" origin "$ROOT/none.git" < "$ROOT/pin"
+pin refs/heads/main tok24 "$base"
+expect_block "T24f CLAUDECODE=1·토큰 → 기존 판정(시크릿 차단)" "시크릿 패턴" env CLAUDECODE=1 ALLOW_GIT_PUSH=1 bash "$HOOK" origin "$ROOT/none.git" < "$ROOT/pin"
+expect_block "T24g CLAUDECODE 미설정 → 기존 판정(시크릿 차단)" "시크릿 패턴" bash "$HOOK" origin "$ROOT/none.git" < "$ROOT/pin"
+# T25 가드 준비 실패 = 차단 — 원격 판 가드 문법 오류 / 로컬 판 lib 부재
+mklocal t25; printf 'if then\n' >> "$GUARD_REL"; G commit -qam broken; bad=$(G rev-parse HEAD)
+G checkout -qb fixed; cp "$KIT/$GUARD_REL" "$GUARD_REL"; G commit -qam fix; cf a.txt a; pin refs/heads/fixed fixed "$bad"
+expect_block "T25a 원격 판 가드 문법 오류" "문법·함수 점검에 실패" bash "$HOOK" origin "$ROOT/none.git" < "$ROOT/pin"
+G checkout -qb nolib fixed; G rm -q "$LIB_REL"; G commit -qm rmlib
+pin refs/heads/nolib nolib fixed
+expect_block "T25b 로컬 판 lib 부재" "로컬 판 가드" bash "$HOOK" origin "$ROOT/none.git" < "$ROOT/pin"
+# T26 트리를 가리키는 태그 = 차단
+mklocal t26; tt=$(printf 'object %s\ntype tree\ntag tt\ntagger t <t@example.invalid> 1700000000 +0000\n\nm\n' "$(G rev-parse 'HEAD^{tree}')" | G mktag)
+printf 'refs/tags/tt %s refs/tags/tt %040d\n' "$tt" 0 > "$ROOT/pin"
+expect_block "T26 트리 태그" "커밋을 가리키지 않습니다" bash "$HOOK" origin "$ROOT/none.git" < "$ROOT/pin"
 # 임시 디렉터리 잔존 없음(trap 정리)
 [ -z "$(ls -A "$TMPDIR")" ] && pass || { : > "$OUT"; fail "훅 임시 디렉터리 잔존: $(ls -A "$TMPDIR" | tr '\n' ' ')"; }
 # 임시 worktree 등록 잔존 없음 — 마지막 검사 커밋이 루트(unborn HEAD)인 T9 레포에서도

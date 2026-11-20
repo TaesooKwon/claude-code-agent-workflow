@@ -8,7 +8,10 @@
 # `cd x && git push` 같은 체인·래핑 형태에서 조용히 새어 나간다 — 판정을 기계화한 것이 이 훅이다.
 #
 # 우회(사용자가 명시적으로 허용했을 때만): 명령 앞에 ALLOW_GIT_PUSH=1 을 붙인다.
-#   셸 변수 대입 형태(줄머리 또는 ; & | 뒤)로만 인정한다 — 안내문·인용문에 섞인 문구로는 뚫리지 않는다.
+#   강제 푸시(-f·--force*·+refspec)는 바로 뒤에 ALLOW_GIT_FORCE_PUSH=1 까지 붙여야 열린다(ALLOW_GIT_PUSH=1 ALLOW_GIT_FORCE_PUSH=1 <명령>).
+#   원격 삭제·미러(--mirror·--delete·--prune·-d·:ref)도 강제와 같이 두 대입을 요구한다(아래 허락 재확인 관문 G-P).
+#   셸 변수 대입 형태로만 인정한다 — 줄 단위 원문 판정(줄머리 또는 ; & | 뒤)을 통과한 뒤, G-P 가 그 대입이 푸시 호출과
+#   같은 세그먼트의 머리에 있는지(인용·주석 속 문구나 다른 세그먼트의 대입이 아닌지) 토큰 단위로 다시 본다.
 #
 # 한계(알고 쓰는 것):
 #   - 판정은 정규식이라 셸 문법을 완전히 파싱하지 못한다. 변수 조립(`g=git; $g push`)·별칭은 미탐이다.
@@ -210,13 +213,16 @@ git_strip_heredoc() {
       sq = sprintf("%c", 39)
       split("cat tee grep jq sort head tail wc diff tr cut", a, " ")
       for (i in a) SINK[a[i]] = 1
-      qn = 0; qi = 1
+      qn = 0; qi = 1; impure = 0; orig = ""; buf = ""
+      nm = "[A-Za-z_][A-Za-z0-9_]*"                     # 순수형 4종 = NAME · 'NAME' · "NAME" · \NAME
+      PURE = "^(" nm "|" sq nm sq "|\"" nm "\"|\\\\" nm ")$"
     }
     {
+      orig = orig $0 "\n"                              # 순수형이 아닌 구분자가 보이면 END 에서 원문 전체를 낸다
       if (qi <= qn) {                                   # 히어독 본문 안 — 순서대로 소비한다
         tl = $0; if (QD[qi]) sub(/^\t+/, "", tl)
-        if (tl == QT[qi]) { if (!QS[qi]) print; qi++; next }
-        if (!QS[qi]) print
+        if (tl == QT[qi]) { if (!QS[qi]) buf = buf $0 "\n"; qi++; next }
+        if (!QS[qi]) buf = buf $0 "\n"
         next
       }
       qn = 0; qi = 1
@@ -227,7 +233,10 @@ git_strip_heredoc() {
       off = 0; rest = d
       while (match(rest, /<<-?[[:space:]]*("[^"]*"|'"'"'[^'"'"']*'"'"'|[^[:space:]<>;|&()"'"'"']+)/)) {
         p = off + RSTART; L = RLENGTH
-        t = substr(d, p, L); sub(/^<<-?[[:space:]]*/, "", t); gsub(/["'"'"'\\]/, "", t)
+        t = substr(d, p, L); sub(/^<<-?[[:space:]]*/, "", t)
+        nx = substr(d, p + L, 1)                        # 토큰 단어가 매치 뒤로 이어지면(<<"E"OF·<<E"OF") 섞인 형태
+        if ((nx != "" && nx !~ /[[:space:]<>;|&()]/) || t !~ PURE) impure = 1
+        gsub(/["'"'"'\\]/, "", t)
         s0 = 0; for (k = p - 1; k >= 1; k--) if (issep(d, k)) { s0 = k; break }
         e0 = 0; for (k = p + L; k <= length(d); k++) if (issep(d, k)) { e0 = k; break }
         sl = (e0 ? e0 : length(d) + 1) - s0 - 1
@@ -238,14 +247,139 @@ git_strip_heredoc() {
                   && strippable(seg, oseg, firstword(substr(d, s0 + 1, p - 1 - s0)), t))
         off = p + L - 1; rest = substr(d, p + L)
       }
-      print
-    }'
+      buf = buf $0 "\n"
+    }
+    END { printf "%s", (impure ? orig : buf) }'
 }
 
 git_has_subcommand "$(git_strip_quoted "$(git_strip_heredoc "$cmd")")" push || exit 0
 
-# 명시적 우회 — 셸 변수 대입 형태로만.
+# 명시적 우회 — 셸 변수 대입 형태로만. 강제 푸시(-f 묶음·--force*·축약 --for…·+refspec)는 ALLOW_GIT_FORCE_PUSH=1 까지 요구한다
+# (일반 푸시 허락이 원격 이력 덮어쓰기까지 여는 것을 막는다).
+# ponytail: 강제 판정은 따옴표·히어독을 걷은 명령 전체 텍스트 — 같은 명령의 다른 세그먼트 -f(rm -f·tail -f·--format 등)도 강제로 보아 더 엄격하다
+#   (따옴표로 감싼 단일 강제 토큰 "-f"·"+main" 은 아래 G-P 가 토큰 단위로 본다) / 세그먼트 단위 판정
+# 일반 허락 판정은 HEAD 와 같은 식을 원문에 그대로 쓴다(넓히면 인용 속 문구가 대입처럼 보이는 회귀가 났다 — 2026-11-17 재리뷰 4라운드).
+# 위 줄 단위 원문 판정은 인용·주석 속 "; ALLOW_…" 꼴과 다른 세그먼트의 대입에도 맞는다 → 통과시키기 전에 아래 허락 재확인 관문을 거친다.
+# 출력 = deny JSON 하나(호출부가 출력 뒤 바로 종료한다).
+deny() {
+  if command -v jq >/dev/null 2>&1; then
+    jq -n --arg r "$1" '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"deny",permissionDecisionReason:$r}}'
+  else
+    HOOK_DENY_REASON="$1" python3 -c 'import json,os,sys
+json.dump({"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny",
+          "permissionDecisionReason":os.environ.get("HOOK_DENY_REASON","")}}, sys.stdout, ensure_ascii=False)'
+  fi
+}
+
+# 허락 재확인 관문 G-P — 위 허락 식이 맞고 강제 판정에도 걸리지 않은 호출에만 돈다(바뀌는 방향은 통과 → deny 뿐).
+#   히어독을 걷은 명령을 shlex(posix, 따옴표 밖 줄바꿈 = ;, 따옴표 밖 낱말 머리 # = 주석)로 세그먼트로 나눠
+#   git … push 세그먼트마다 ①머리 대입(VAR=…)들 안에 ALLOW_GIT_PUSH=1 이 있어야 하고
+#   ②원격 삭제·미러·강제 토큰(--mirror·--delete·--prune 과 그 축약, -*d* 묶음, :ref, 따옴표를 벗긴 강제 토큰)이 있으면
+#   그 바로 뒤에 ALLOW_GIT_FORCE_PUSH=1 대입이 있어야 한다. 출력 = 거부 사유(빈 출력 = 통과).
+#   전체 파싱 실패(ValueError — 걷지 않은 히어독 본문의 아포스트로피 등)면 줄 단위로 다시 나누고, 파싱 안 되는 줄에
+#   git 낱말과 push 가 함께 있으면 거부한다. push 세그먼트를 못 찾음·python 실패 = 거부(판정 불가).
+# ponytail: 셸 래퍼(sh -c "…") 안의 푸시는 세그먼트로 보이지 않는다 — 보이는 푸시 세그먼트가 하나도 없으면 판정 불가로
+#   거부되지만, 있으면 래퍼 안은 판정 밖이라 통과한다 · ANSI-C 인용 $'…' 안의 \' 는 shlex 가 닫히지 않은 따옴표로 읽는다 ·
+#   줄 단위 폴백은 여러 줄 인용과 줄 경계가 어긋나게 조립한 명령을 bash 와 다르게 나눌 수 있다
+#   / 업그레이드 = 셸 -c 본문 재귀(파괴 명령 가드 G-D2 와 같은 방식)·$'…' 해석·bash 파서 사용
+gate_allow() {
+  CMD="$1" python3 -I - <<'PY'
+import os, re, shlex
+def segments(s):
+    """세그먼트(낱말 목록) 목록. 닫히지 않은 따옴표 등은 ValueError."""
+    out, q, i, n = [], "", 0, len(s)
+    while i < n:  # 따옴표 밖 줄바꿈 → ';' · \+줄바꿈 → 공백 · 따옴표 밖 낱말 머리 '#' ~ 줄 끝 제거
+        c = s[i]
+        if q == "'":
+            out.append(c); q = "" if c == "'" else q
+        elif q == '"':
+            out.append(c)
+            if c == "\\" and i + 1 < n: out.append(s[i + 1]); i += 1
+            elif c == '"': q = ""
+        elif c == "\\" and i + 1 < n:
+            out.append(" " if s[i + 1] == "\n" else c + s[i + 1]); i += 1
+        elif c in "'\"":
+            q = c; out.append(c)
+        elif c == "#" and (not out or out[-1][-1] in " \t;&|()"):
+            while i + 1 < n and s[i + 1] != "\n": i += 1
+        elif c == "\n":
+            out.append(";")
+        else:
+            out.append(c)
+        i += 1
+    lex = shlex.shlex("".join(out), posix=True, punctuation_chars=";&|()")
+    lex.whitespace_split = True; lex.commenters = ""
+    segs, cur = [], []
+    for t in lex:
+        if t and set(t) <= set(";&|()"):
+            if cur: segs.append(cur)
+            cur = []
+        else:
+            cur.append(t)
+    if cur: segs.append(cur)
+    return segs
+s = os.environ["CMD"]
+try:
+    segs = segments(s)
+except ValueError:  # 걷지 않은 히어독 본문의 아포스트로피 등 — 줄 단위로 다시 나누고, 파싱 안 되는 줄에 git·push 가 함께 있으면 거부
+    segs = []
+    for line in s.replace("\\\n", " ").split("\n"):
+        try:
+            segs.extend(segments(line))
+        except ValueError:
+            if re.search(r"(^|[^A-Za-z0-9_.-])git([^A-Za-z0-9_-]|$)", line) and "push" in line:
+                print("판정 불가(푸시가 든 줄의 닫히지 않은 따옴표 등)"); raise SystemExit(0)
+RES = {"do", "then", "else", "elif", "if", "while", "until", "!", "{", "time"}
+VALOPTS = ("-C", "-c", "--git-dir", "--work-tree", "--namespace", "--super-prefix", "--exec-path")
+found = False
+for a in segs:
+    while a and a[0] in RES: a = a[1:]
+    head = []
+    for x in a:
+        if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", x): break
+        head.append(x)
+    for g, x in enumerate(a):
+        if os.path.basename(x) != "git": continue
+        j = g + 1
+        while j < len(a) and a[j].startswith("-"):
+            j += 2 if a[j] in VALOPTS else 1
+        if j >= len(a) or a[j] != "push": continue
+        found = True
+        if "ALLOW_GIT_PUSH=1" not in head:
+            print("허락 대입(ALLOW_GIT_PUSH=1)이 이 푸시 세그먼트 머리에 없음"); raise SystemExit(0)
+        rest = a[j + 1:]
+        opts = rest[:rest.index("--")] if "--" in rest else rest
+        risky = [y for y in opts if any(len(y) >= 4 and full.startswith(y) for full in ("--mirror", "--delete", "--prune"))
+                 or re.fullmatch(r"-[a-zA-Z]*[df][a-zA-Z]*|--for[a-z-]*(=.*)?", y)]
+        risky += [y for y in rest if (y.startswith(":") and len(y) > 1) or re.fullmatch(r"\+.+", y)]
+        k = head.index("ALLOW_GIT_PUSH=1")
+        if risky and head[k + 1:k + 2] != ["ALLOW_GIT_FORCE_PUSH=1"]:
+            print("원격 삭제·미러·강제 형태(" + " ".join(risky[:3]) + ") — ALLOW_GIT_PUSH=1 바로 뒤에 ALLOW_GIT_FORCE_PUSH=1 필요"); raise SystemExit(0)
+        break
+if not found:
+    print("판정 불가(허락 문구는 있으나 git push 세그먼트를 읽지 못함)")
+PY
+}
+
+_stripped=$(git_strip_quoted "$(git_strip_heredoc "$cmd")")
 if printf '%s' "$cmd" | grep -Eq '(^|[;&|][[:space:]]*)ALLOW_GIT_PUSH=1[[:space:]]'; then
+  if printf '%s' "$_stripped" | grep -Eq '(^|[[:space:]])(-[a-zA-Z]*f[a-zA-Z]*|--for[a-z-]*(=[^[:space:]]*)?|\+[^[:space:]]+)([[:space:]]|$)' \
+     && ! printf '%s' "$cmd" | grep -Eq '(^|[;&|][[:space:]]*)ALLOW_GIT_PUSH=1[[:space:]]+ALLOW_GIT_FORCE_PUSH=1[[:space:]]'; then  # 일반 허락 바로 뒤 대입으로만
+    deny "[푸시 가드] 강제 푸시 — ALLOW_GIT_PUSH=1 만으로는 열리지 않습니다.
+원격 이력을 덮어쓰는 푸시(-f·--force·--force-with-lease·+refspec)입니다. 사용자가 강제 푸시를 명시적으로 지시했을 때만
+'ALLOW_GIT_PUSH=1 ALLOW_GIT_FORCE_PUSH=1 <명령>' 으로 다시 실행하세요."
+    exit 0
+  fi
+  if command -v python3 >/dev/null 2>&1; then
+    _g=$(gate_allow "$(git_strip_heredoc "$cmd")" 2>/dev/null) || _g="판정 불가(관문 실행 실패)"
+  else
+    _g="판정 불가(python3 없음)"
+  fi
+  if [ -n "$_g" ]; then
+    deny "[푸시 가드] 허락 형태 확인 실패 — ${_g}.
+ALLOW_GIT_PUSH=1 은 git push 와 같은 세그먼트의 머리에 셸 대입으로 둬야 열립니다(인용·주석 속 문구, 다른 세그먼트의 대입은 인정 안 함).
+원격 브랜치 삭제·미러·강제 형태는 'ALLOW_GIT_PUSH=1 ALLOW_GIT_FORCE_PUSH=1 <명령>' 으로만 — 사용자가 그것까지 지시했을 때만 쓰세요."
+  fi
   exit 0
 fi
 
@@ -262,11 +396,5 @@ reason="[푸시 가드] 푸시는 사용자 전담 — 해시까지만 보고하
 
 사용자가 이번 푸시를 명시적으로 지시한 경우에만 'ALLOW_GIT_PUSH=1 <명령>' 형태로 다시 실행하세요."
 
-if command -v jq >/dev/null 2>&1; then
-  jq -n --arg r "$reason" '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"deny",permissionDecisionReason:$r}}'
-else
-  HOOK_DENY_REASON="$reason" python3 -c 'import json,os,sys
-json.dump({"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny",
-          "permissionDecisionReason":os.environ.get("HOOK_DENY_REASON","")}}, sys.stdout, ensure_ascii=False)'
-fi
+deny "$reason"
 exit 0

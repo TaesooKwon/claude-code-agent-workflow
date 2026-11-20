@@ -2,6 +2,7 @@
 # init-machine-env.sh — 새 머신에서 machine.env 를 자동 파악해 채운다.
 # 자동 감지: PROJECTS_DIR(레포 모인 곳)·MAVEN_REPO(경로 존재)·STRICT_PROJECT(기본 비움).
 # 보존: AGENT_REPOS — 사람이 고르는 목록이라 기존 machine.env 의 줄을 그대로 옮긴다(없으면 빈 값).
+#       PUBLIC_SNAPSHOT_DIR — 사람이 정하는 선택 경로라 기존 줄이 있으면 그대로 옮긴다(없으면 넣지 않는다).
 #
 # 사용:
 #   ./init-machine-env.sh                      # 자동감지
@@ -46,6 +47,7 @@ STRICT_PROJECT=""
 # --- machine.env 쓰기(기존 있으면 백업) ---
 # AGENT_REPOS 는 값에 백틱이 있어 작은따옴표 줄 원문을 그대로 옮긴다(재평가하지 않는다).
 AR_LINE="$(grep -E '^AGENT_REPOS=' "$OUT" 2>/dev/null | tail -1 || true)"
+PS_LINE="$(grep -E '^PUBLIC_SNAPSHOT_DIR=' "$OUT" 2>/dev/null | tail -1 || true)"
 if [ -f "$OUT" ]; then cp "$OUT" "$OUT.bak" && echo "기존 machine.env → machine.env.bak 백업"; fi
 cat > "$OUT" <<EOF
 # machine.env — init-machine-env.sh 자동 생성. 필요 시 손수 수정.
@@ -55,6 +57,7 @@ MAVEN_REPO="$MAVEN_REPO"
 EOF
 [ -n "$AR_LINE" ] || AR_LINE="AGENT_REPOS=''"
 printf '%s\n' "$AR_LINE" >> "$OUT"
+[ -z "$PS_LINE" ] || printf '%s\n' "$PS_LINE" >> "$OUT"
 
 echo "=== machine.env 생성 완료 ==="
 printf '  PROJECTS_DIR   = %s%s\n' "$PROJECTS_DIR" "$([ -d "$PROJECTS_DIR" ] && echo '' || echo '  (⚠ 아직 없음 — 맞는지 확인)')"

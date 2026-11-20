@@ -17,8 +17,8 @@ claude --version          # 설치 확인
 # 최초 로그인(브라우저 인증) — ~/.claude/ 생성
 ```
 
-> 순서 주의: Claude Code를 한 번 띄우면 `~/.claude/settings.json`이 선생성될 수 있다. 그래도 괜찮다 —
-> `bootstrap-machine.sh`는 기존 `settings.json`을 **다른 설정은 보존하고 `hooks.Stop` 배열만 킷 템플릿 것으로 교체**한다(기존 Stop 훅은 `.bak` 백업에만 남는다)(4절).
+> 순서 주의: Claude Code를 한 번 띄우면 `~/.claude/settings.json`이 선생성될 수 있다. 그래도 킷 훅 등록은 들어간다 —
+> `bootstrap-machine.sh`는 기존 `settings.json`을 통째로 덮어쓰지 않고 병합한다 — **`hooks.Stop` 을 킷 템플릿 것으로 통째 교체**(라이브에만 있는 Stop 원소는 사라진다)하고, PreToolUse 에 `destructive-cmd-ask` 등록을 보장하고(matcher 가 킷 것으로 바뀔 수 있다 — 조건은 `bootstrap-machine.sh` 의 settings jq), Stop 밖 이벤트에서 템플릿의 훅이 같은 이벤트에 없으면(스크립트 파일명 기준 — hook-obs 래퍼 꼴도 등록으로 센다) 템플릿의 matcher 그룹째 뒤에 붙이고, `permissions.deny` 가 아예 없으면 킷 deny 를 넣는다. 그 밖(statusline·MCP·기존 hooks 등록·순서·matcher·기존 권한)은 보존, 바꾸기 전 `.bak-<시각>` 백업(4절). 기존 파일이 이상 형식이면 건드리지 않고 `✗ settings.json 갱신 실패` 를 안내한다.
 
 ## 1. 사전 프로그램 설치 (mac)
 
@@ -90,12 +90,12 @@ vi machine.env
 
 설치되는 것:
 
-- `~/.claude/hooks/*.sh` — `global/hooks/` 의 훅 전부(설치 후 `+x`). 그중 `settings.json` 에 자동 등록되는 것은 템플릿의 Stop 훅(목록 = 템플릿 `hooks.Stop`)이다(아래 settings 항목)
-- `~/.claude/skills/` — `global/skills/` 의 스킬 전부(파일별 치환 설치)
+- `~/.claude/hooks/*.sh` — 킷 `global/hooks/` 의 훅(설치 후 `+x`)
+- `~/.claude/skills/` — `global/skills/` 아래 스킬 폴더(목록 = `ls global/skills`, 파일별 치환 설치)
 - `~/.claude/agent-scaffold/` — 새 레포 부트스트랩용 스캐폴드
 - `~/.claude/agents/` — 에이전트 정의(있으면)
 - `~/.claude/CLAUDE.md` — 전역 규약
-- `~/.claude/settings.json` — 없으면 설치. **이미 있으면 `hooks.Stop` 배열만 jq로 템플릿 것으로 교체**(기존 Stop 훅은 사라지니 필요하면 백업에서 다시 넣는다. 권한·statusline·MCP·다른 hooks 이벤트는 그대로 보존, 교체 전 `.bak-<날짜>` 백업). 멱등(이미 정합이면 "동일"). `jq`/`python3`/`git` 없으면 스크립트가 **최상단에서 즉시 중단**(exit 1)하고 `brew install` 안내 — 설치되는 훅 전부가 이 3종에 의존하므로 "설치는 됐는데 훅이 조용히 깨짐"을 원천 차단.
+- `~/.claude/settings.json` — 없으면 설치. **이미 있으면 jq로 `hooks.Stop` 을 킷 템플릿 것으로 통째 교체**(라이브에만 있는 Stop 원소는 사라진다)하고, PreToolUse 에 `destructive-cmd-ask` 등록을 보장하고(matcher 가 킷 것으로 바뀔 수 있다 — 조건은 `bootstrap-machine.sh` 의 settings jq), 템플릿의 그 밖 이벤트 훅 중 같은 이벤트에 없는 것을 추가하고(스크립트 파일명 기준 — 판정 규칙은 그 jq 의 `hnames`), `permissions.deny` 가 아예 없으면 킷 deny 를 넣는다. 그 밖(statusline·MCP·기존 hooks 등록·기존 권한)은 보존, 바꾸기 전 `.bak-<시각>` 백업. 멱등(이미 정합이면 "동일") · `--dry-run` 은 추가될 등록(`이벤트:파일명`)을 안내만 한다 · 기존 파일이 이상 형식이면 그대로 두고 실패 안내. `jq`/`python3`/`git` 없으면 스크립트가 **최상단에서 즉시 중단**(exit 1)하고 `brew install` 안내 — 설치되는 훅 전부가 이 3종에 의존하므로 "설치는 됐는데 훅이 조용히 깨짐"을 원천 차단.
 
 ## 5. doctor.sh 검진
 
@@ -110,11 +110,12 @@ vi machine.env
 1. **의존 프로그램** — `jq`/`python3`/`git` 없으면 **✗ 실패**, `node`/`mvn` 없으면 ⚠ 경고.
 2. **전역 자산 설치** — `CLAUDE.md`·`settings.json`·`hooks`·`skills/harness`·`skills/bootstrap-project`·`agent-scaffold` 존재.
 3. **훅 설치·실행권한** — 킷 핵심 Stop 훅(`closed-loop-history`·`convention-gate`·`history-rotate-check`)의 파일+`+x`.
-4. **Stop 훅 등록** — `settings.json`의 `hooks.Stop`에 [3]의 핵심 훅이 등록됐는지. **미등록이면 ✗ 실패**(킷의 핵심 강제층이라 "doctor는 괜찮다는데 훅이 죽어있음"을 차단 → bootstrap 재실행으로 Stop 교체).
+4. **Stop 훅 등록** — `settings.json`의 `hooks.Stop`에 [3]의 핵심 훅이 등록됐는지. **미등록이면 ✗ 실패**(킷의 핵심 강제층이라 "doctor는 괜찮다는데 훅이 죽어있음"을 차단 → bootstrap 재실행으로 Stop 을 킷 템플릿 것으로 교체).
 5. **경로 드리프트** — 훅/settings **내용**에 현재 홈(`$HOME`)과 다른 절대경로(예: 이전 사용자 `/Users/olduser/…`)가 박혀있지 않은지, statusline node 경로 유효성.
    - **5b. settings.json 키 드리프트** — 라이브 top-level 키가 킷 템플릿에 있는지, 이벤트별 훅 등록 집합이 같은지(⚠ — `kit-drift-exclude.txt` 의 `hooks/` 줄은 뺀다).
    - **5c. 내용 드리프트** — `hooks`·`agent-scaffold`·`skills`·`agents` 를 토큰 치환 후 라이브와 대조, 라이브에만 있는 전역 훅 역방향 검출(⚠).
    - **5d. 팀 좌석+Paseo 모듈(선택)** — (공개 스냅샷에는 모듈이 없어 "모듈 패키지 없음 — 건너뜀"으로 끝난다) `~/.claude-team` 이 있거나 모듈 훅이 등록된 머신에서만: 모듈 훅 설치·`+x`·패키지와 동일성, 등록, 좌석 필수 링크(`CLAUDE.md` → `rules-lite.md`, 나머지 → `~/.claude`), `lite.json` 필수 제외 경로(좌석 `CLAUDE.md` 를 제외하면 ⚠), `~/.claude-team/run` 권한 700, 좌석 bin, 셸 rc 의 `claude-team` 별칭에 `--append-system-prompt-file` 이 남았으면 ⚠, 전역 「추가」 조항, Paseo `claude-team` provider(없음·`claude-seat.sh` 없음·`--append-system-prompt-file` 있음, 래퍼가 있으면 래퍼 파일·`CLAUDE_SEAT_BIN`·`CLAUDE_SEAT_LITE` 중 하나라도 없거나 쓸 수 없으면 ⚠, 읽기 전용). 해당 없으면 "건너뜀". 설치 절차 = 모듈의 `INSTALL.md`(공개 스냅샷 미포함).
+   - **5g. 전역 deny 대조** — 라이브 `permissions.deny` 와 킷 템플릿 deny 를 대조(⚠ — 라이브에만 있음 / 템플릿에만 있는데 `settings-deny-kit-only.txt` 에 미등록 / 등록인데 템플릿에 없음(등록이 낡음), deny 가 문자열 배열이 아니면 판정 불가 ⚠ · 등록 항목이 라이브·템플릿에 다 있으면 ✓ 정보 — 킷 기본값 그대로).
 6. **JVM 빌드 관문(선택)** — `MAVEN_REPO`(machine.env 반영) 오프라인 레포 존재 여부(없으면 ⚠, 6절 참조).
 7. **Playwright 의존(선택)** — 시각검증 스킬의 `node_modules` 설치 여부(미설치 ⚠, 7절 참조).
 8. **Java LSP(jdtls, 선택)** — jdtls 심 설치·PATH 순서(⚠).
@@ -134,8 +135,8 @@ vi machine.env
 
 ## 7. [선택] 킷 범위 밖 항목 (간단 안내)
 
-`settings.json.template`은 이식 가능한 공통(권한·`hooks.Stop`·`theme`·팀 에이전트 플래그 `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`·`teammateMode`·`enabledMcpjsonServers` 플레이스홀더)을 담는다.
-> ⚠️ **적용 시점 주의:** `bootstrap-machine.sh`는 **settings.json 이 없으면 템플릿을 통째로 설치**(→ theme·팀 플래그·MCP 전부 적용), **이미 있으면 `hooks.Stop`만 교체**하고 나머지(theme·env·MCP·권한)는 **기존값 보존**(덮어쓰지 않음). 즉 위 신규 키는 **새(빈) 머신에서만 자동 반영**되고, 기존 settings.json 이 있는 머신엔 수동으로 추가한다.
+`settings.json.template`은 이식 가능한 공통(권한·훅 등록 `hooks`·`theme`·팀 에이전트 플래그 `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`·`teammateMode`·`enabledMcpjsonServers` 플레이스홀더)을 담는다.
+> ⚠️ **적용 시점 주의:** `bootstrap-machine.sh`는 **settings.json 이 없으면 템플릿을 통째로 설치**(→ theme·팀 플래그·MCP 전부 적용), **이미 있으면 `hooks.Stop` 을 킷 것으로 통째 교체**(라이브에만 있는 Stop 원소는 사라진다 — 백업 .bak-<시각>)하고 `destructive-cmd-ask` 등록 보장·빠진 킷 훅 등록 추가·deny 가 없을 때만 킷 deny 주입(4절) 외의 키(theme·env·MCP·기존 권한)는 **기존값 보존**(덮어쓰지 않음). 즉 위 신규 키는 **새(빈) 머신에서만 자동 반영**되고, 기존 settings.json 이 있는 머신엔 수동으로 추가한다.
 
 아래는 머신·플러그인·시크릿 고유라 킷에서 제외 — 필요하면 수동 구성:
 
@@ -147,7 +148,7 @@ vi machine.env
 - **플러그인 클러스터 3키 — `statusLine`·`enabledPlugins`·`extraKnownMarketplaces`**: 라이브 settings.json의 이 3키는 **절대경로가 박혀 있어 그대로 복사하면 새 머신에서 깨진다**(statusLine=nvm node 경로+claude-hud dist 캐시경로, extraKnownMarketplaces=claude-hud github 소스). 그래서 **값 복사가 아니라 플러그인 설치로 재현**한다 — 설치하면 Claude Code가 이 3키를 머신에 맞는 경로로 **자동 기록**한다:
   - `claude-hud`(statusline) — 마켓플레이스 설치 후 `claude-hud:setup` 스킬로 `statusLine.command` 자동 등록. doctor 5절이 node 경로 유효성 검사.
   - `jdtls-lsp`(Java LSP) — §11. `swift-lsp`는 라이브에서 `false`(비활성)라 재현 대상 아님.
-- **MCP DB 서버** — 회사 dev/운영 DB MCP는 접속정보·시크릿이라 킷에 없음. 템플릿 `enabledMcpjsonServers`엔 `__PROJECT__-dev-db` 플레이스홀더만 있으니 새 환경에서 실제 서버명으로 교체. 운영 DB MCP 는 `enabledMcpjsonServers` 에 넣지 않고(세션 시작 때 승인 질문), 템플릿 `permissions.ask` 와 `destructive-cmd-ask.sh`(훅 `case` 분기·settings matcher)의 `__PROJECT__-real-db` 플레이스홀더를 실제 운영 서버명으로 바꾼다(접속정보는 각 프로젝트 `.mcp.json`을 `bootstrap-project`로 배선, 비번은 env-var/`machine.env`).
+- **MCP DB 서버** — 회사 dev/운영 DB MCP는 접속정보·시크릿이라 킷에 없음. 템플릿 `enabledMcpjsonServers`엔 `__PROJECT__-dev-db` 플레이스홀더만 있으니 새 환경에서 실제 서버명으로 교체. 운영 DB MCP 는 `enabledMcpjsonServers` 에 넣지 않고(세션 시작 때 승인 질문), **서버명을 `-db` 로 끝나게(개발 DB 는 `-dev-db`·`-devserver-db` — 훅의 개발 접미사 명시 목록) 짓는다** — `destructive-cmd-ask.sh` 가 이름 규칙(소문자화해 `-db` 로 끝나고 개발 접미사가 아니면 ask)으로 확인창을 띄우고, settings matcher `Bash|mcp__.*-[Dd][Bb]__.*` 는 bootstrap 이 보장한다(서버명 교체 작업 없음, 실명은 킷에 넣지 않는다 — doctor [5e] 가 반출 검사). 라이브 `permissions.ask` 에 운영 서버명을 따로 적는 것은 선택(보조 층)이다(접속정보는 각 프로젝트 `.mcp.json`을 `bootstrap-project`로 배선, 비번은 env-var/`machine.env`).
 - **전역 MCP(context7)** — 시크릿 없는 공용 문서조회 MCP. 새 머신에서 한 번 등록: `claude mcp add context7 -- npx -y @upstash/context7-mcp`.
 - **`settings.local.json`(머신 로컬 override)** — 킷 `global/settings.local.json.example` 참고해 `~/.claude/settings.local.json`으로 복사(프로젝트별 임시 허용 등, 커밋 안 됨).
 

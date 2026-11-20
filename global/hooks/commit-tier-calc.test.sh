@@ -237,6 +237,25 @@ OUT=$(run_ctx "$R" "$COMMIT_CMD")
 assert_has "auth_paths 히트 → 소형 A 아니오" "$OUT" "소형 A 후보: **아니오**"
 assert_has "실격 사유에 인증/인가 경로 표기"  "$OUT" "인증/인가 추정 경로"
 
+# tier.conf 값은 훅 프로세스 cwd 의 파일명으로 펼쳐지지 않는다 — cwd 에 글롭과 맞는 실제 파일·디렉터리를 두고 빈 cwd 와 결과 대조
+R=$(mkrepo h_cwdglob)
+mkdir -p "$R/.claude" "$R/sub" "$R/src/gate"
+printf 'extra_a_globs=*.sh\nauth_paths=[g]ate/\n' > "$R/.claude/tier.conf"
+echo 'echo x' > "$R/sub/x.sh"; echo 'g' > "$R/src/gate/G.txt"
+git -C "$R" add -A >/dev/null 2>&1
+CW_E="$TMP/cwd_empty"; CW_G="$TMP/cwd_glob"; mkdir -p "$CW_E" "$CW_G/gate"; echo x > "$CW_G/a.sh"
+OUT_E=$(cd "$CW_E" && run_ctx "$R" "$COMMIT_CMD"); OUT_G=$(cd "$CW_G" && run_ctx "$R" "$COMMIT_CMD")
+assert_has "cwd 에 a.sh 가 있어도 sub/x.sh → A티어(extra_a_globs 미확장)" "$OUT_G" "A티어"
+assert_has "cwd 에 a.sh 가 있어도 ⓔ 근거에 sub/x.sh"                     "$OUT_G" "- sub/x.sh"
+assert_has "auth_paths 글롭 문자는 리터럴 — cwd 무관 소형 A 예"          "$OUT_G" "소형 A 후보: **예**"
+if [ "$OUT_E" = "$OUT_G" ]; then ok "빈 cwd 와 글롭 일치 cwd 의 보고문 동일"; else nok "빈 cwd 와 글롭 일치 cwd 의 보고문 다름" "$OUT_G"; fi
+# 값 안의 명령 치환 꼴은 실행되지 않는다(source·eval 없음)
+R=$(mkrepo h_confcmd); mkdir -p "$R/.claude"
+printf 'extra_a_globs=$(touch %s/pwned) `touch %s/pwned2`\n' "$TMP" "$TMP" > "$R/.claude/tier.conf"
+echo x > "$R/a.txt"; git -C "$R" add -A >/dev/null 2>&1
+OUT=$(run_ctx "$R" "$COMMIT_CMD")
+if [ ! -e "$TMP/pwned" ] && [ ! -e "$TMP/pwned2" ]; then ok "tier.conf 값의 명령 치환 미실행"; else nok "tier.conf 값의 명령 치환이 실행됨" "$OUT"; fi
+
 # ── 소형 A 실격: 파일 수 상한 초과 ─────────────────────────────────────────────
 R=$(mkrepo i_many)
 mkdir -p "$R/src"

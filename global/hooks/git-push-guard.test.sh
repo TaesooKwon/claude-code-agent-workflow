@@ -5,7 +5,8 @@
 #    레포의 커밋·푸시 계열 가드가 그 문자열을 보고 호출 자체를 막는다.
 set -u
 
-HOOK="$(cd "$(dirname "$0")" && pwd)/git-push-guard.sh"
+HOOK="${1:-$(cd "$(dirname "$0")" && pwd)/git-push-guard.sh}"   # 인자 = 다른 판(HEAD 사본 등)을 같은 표로 돌릴 때
+CASES=()   # _check 로 돈 명령 — 아래 HEAD 차등 비교가 같은 입력으로 다시 돌린다
 [ -f "$HOOK" ] || { echo "훅 파일 없음: $HOOK"; exit 2; }
 
 run=0
@@ -34,13 +35,17 @@ else:
 # $1=기대(deny|allow) $2=설명 $3=명령문자열
 _check() {
   local want="$1" desc="$2" cmd="$3" out rc got
-  run=$((run + 1))
+  run=$((run + 1)); CASES+=("$cmd")
   out=$(_payload "$cmd" | bash "$HOOK" 2>/dev/null)
   rc=$?
   got=$(_decision_of "$out")
   [ -n "$got" ] || got="allow"
   if [ "$rc" -ne 0 ]; then
     printf 'FAIL  %-58s (exit=%s, 훅은 항상 0 이어야 한다)\n' "$desc" "$rc"
+    return
+  fi
+  if [ -n "$out" ] && [ "$(printf '%s' "$out" | jq -s length 2>/dev/null)" != 1 ]; then
+    printf 'FAIL  %-58s (출력이 JSON 1개가 아니다)\n' "$desc"
     return
   fi
   if [ "$got" = "$want" ]; then
@@ -88,6 +93,8 @@ _check deny  "-c 따옴표 값 안 줄 잇기"          "$(printf 'git -c x=\"a 
 # 인용 스트립을 피하는 꼴(따옴표 값이 줄 잇기로 두 줄에 걸침) — 인라인 _GIT_OPTVAL 이 직접 판정한다(종전 식이면 allow)
 _check deny  "-C 따옴표 경로 안 줄 잇기(스트립 회피 — _GIT_OPTVAL 판정)" "$(printf 'git -C \"/a \\\nb\" push')"
 _check deny  "heredoc 뒤 줄 잇기 push"         "$(printf 'cat > f.md <<EOF\nx\nEOF\ngit \\\npush')"
+_check deny  "섞인 인용 구분자(<<\"E\"OF) 뒤 push" "$(printf 'cat > f.md <<"E"OF\nx\nEOF\ngit push origin main')"
+_check deny  "섞인 인용 구분자(<<E\"OF\") 뒤 push" "$(printf 'cat > f.md <<E"OF"\nx\nEOF\ngit push origin main')"
 
 echo "== 음성(통과해야 한다) =="
 _check allow "상태 조회"                      'git status --short'
@@ -187,6 +194,93 @@ rm -rf "$_fsh"
 echo "== 우회(ALLOW_GIT_PUSH=1) =="
 _check allow "줄머리 변수 대입"               'ALLOW_GIT_PUSH=1 git push origin main'
 _check allow "&& 뒤 변수 대입"                'cd /tmp && ALLOW_GIT_PUSH=1 git push'
+_check deny  "강제 -f 는 일반 허락으로 안 열림"   'ALLOW_GIT_PUSH=1 git push -f origin main'
+_check deny  "강제 --force"                    'ALLOW_GIT_PUSH=1 git push --force origin main'
+_check deny  "강제 --force-with-lease"         'ALLOW_GIT_PUSH=1 git push --force-with-lease origin main'
+_check deny  "강제 축약 --forc"                'ALLOW_GIT_PUSH=1 git push --forc origin main'
+_check deny  "강제 묶음 -uf"                   'ALLOW_GIT_PUSH=1 git push -uf origin main'
+_check deny  "강제 +refspec"                   'ALLOW_GIT_PUSH=1 git push origin +main'
+_check deny  "강제 -C 경유"                    'ALLOW_GIT_PUSH=1 git -C /r push -f'
+_check allow "강제 + 강제 허락"                'ALLOW_GIT_PUSH=1 ALLOW_GIT_FORCE_PUSH=1 git push --force origin main'
+_check deny  "강제 허락 스푸핑(인용문 안)"     'ALLOW_GIT_PUSH=1 git push -f origin main; echo "note ALLOW_GIT_FORCE_PUSH=1 here"'
+_check deny  "강제 허락 스푸핑(주석 안)"       'ALLOW_GIT_PUSH=1 git push --force origin main  # ALLOW_GIT_FORCE_PUSH=1 '
+_check deny  "허락 스푸핑: 인용 대입 값 속(홑)"   "M='note: ALLOW_GIT_PUSH=1 needed' git push origin main"
+_check deny  "허락 스푸핑: 인용 대입 값 속(겹)"   'X="a ALLOW_GIT_PUSH=1 " git push origin main'
+_check deny  "허락 스푸핑: 명령 치환 값 속"       'X=$(echo ALLOW_GIT_PUSH=1 ) git push origin main'
+_check deny  "강제 허락 스푸핑: 인용 대입 값 속"  "ALLOW_GIT_PUSH=1 M='x ALLOW_GIT_FORCE_PUSH=1 ' git push -f"
+_check deny  "허락 스푸핑: 셸 래퍼 + 인용 속 대입 연쇄" 'bash -c "true"; echo "a;B=1 ALLOW_GIT_PUSH=1 "; git push'
+_check deny  "허락 스푸핑: 겹따옴표 속 \\\" 뒤 문구"  'X="a\" ALLOW_GIT_PUSH=1 " git push origin main'
+_check deny  "허락 스푸핑: 여러 줄 인용 속 대입 꼴" "$(printf 'echo \"\nY=1 ALLOW_GIT_PUSH=1 x\"; git push')"
+_check deny  "강제 허락은 일반 허락 바로 뒤만"     'ALLOW_GIT_FORCE_PUSH=1 ALLOW_GIT_PUSH=1 git push --force origin main'
+_check allow "일반 -u 는 강제 아님"            'ALLOW_GIT_PUSH=1 git push -u origin main'
+_check allow "--follow-tags 는 강제 아님"      'ALLOW_GIT_PUSH=1 git push --follow-tags origin main'
+_check allow "따옴표 안 -f 는 판정 제외"        'ALLOW_GIT_PUSH=1 git push origin main -o "ci.skip -f"'
+
+echo "== 허락 재확인 관문 G-P(2026-11-20) — 줄 단위 허락 식은 맞지만 푸시 세그먼트 머리의 대입이 아닌 것 =="
+_check deny  "G-P 인용 속 '; ALLOW' (한 줄)"        'git commit -m "x; ALLOW_GIT_PUSH=1 y" && git push'
+_check deny  "G-P 여러 줄 메시지 줄머리 꼴"          "$(printf 'git commit -m "fix: guard\n\nALLOW_GIT_PUSH=1 is now required" && git push origin main')"
+_check deny  "G-P 주석 속 '; ALLOW'"               'git push origin main # ; ALLOW_GIT_PUSH=1 x'
+_check deny  "G-P 다른 세그먼트 대입(이중 허락)"     'ALLOW_GIT_PUSH=1 ALLOW_GIT_FORCE_PUSH=1 true; git push -f origin main'
+_check deny  "G-P 앞 푸시만 허락, 뒤 푸시 무허락"     'ALLOW_GIT_PUSH=1 git push origin main; git push origin --delete old'
+_check deny  "G-P 일반 허락 --mirror"               'ALLOW_GIT_PUSH=1 git push --mirror origin'
+_check deny  "G-P 일반 허락 --delete"               'ALLOW_GIT_PUSH=1 git push --delete origin main'
+_check deny  "G-P 일반 허락 :ref"                   'ALLOW_GIT_PUSH=1 git push origin :main'
+_check deny  "G-P 일반 허락 -d"                     'ALLOW_GIT_PUSH=1 git push -d origin main'
+_check deny  "G-P 일반 허락 --prune"                'ALLOW_GIT_PUSH=1 git push --prune origin refs/heads/*:refs/heads/*'
+_check deny  "G-P 일반 허락 인용 강제 토큰"          'ALLOW_GIT_PUSH=1 git push origin "+main"'
+_check deny  "G-P 셸 래퍼 안 푸시(판정 불가)"        'ALLOW_GIT_PUSH=1 bash -c "git push origin main"'
+echo "== 정상 허락 형태 고정 =="
+_check allow "현재 브랜치 치환"                  'ALLOW_GIT_PUSH=1 git push origin "$(git branch --show-current)"'
+_check allow "cd 뒤 -u"                          'cd sub && ALLOW_GIT_PUSH=1 git push -u origin feat'
+_check deny  "다른 대입이 앞(기존 판정 유지)"      'GIT_SSH_COMMAND="ssh -i k" ALLOW_GIT_PUSH=1 git push origin main'
+_check allow "두 푸시 각각 허락"                  'ALLOW_GIT_PUSH=1 git push origin main && ALLOW_GIT_PUSH=1 git push origin --tags'
+_check allow "HEAD:refs/heads/x"                 'ALLOW_GIT_PUSH=1 git push origin HEAD:refs/heads/x'
+_check allow "파이프 tail"                       'ALLOW_GIT_PUSH=1 git push -q origin main 2>&1 | tail -1'
+_check allow "--force-with-lease 이중 허락"       'ALLOW_GIT_PUSH=1 ALLOW_GIT_FORCE_PUSH=1 git push --force-with-lease origin main'
+_check allow "--delete 이중 허락"                'ALLOW_GIT_PUSH=1 ALLOW_GIT_FORCE_PUSH=1 git push origin --delete old'
+_check allow "--mirror 이중 허락"                'ALLOW_GIT_PUSH=1 ALLOW_GIT_FORCE_PUSH=1 git push --mirror origin'
+_check allow "ANSI-C 인용 인자"                  "ALLOW_GIT_PUSH=1 git push origin \$'main'"
+_check allow "줄 잇기"                           "$(printf 'ALLOW_GIT_PUSH=1 git push \\\n  origin main')"
+_check deny  "env 래퍼(기존 판정 유지)"           'env ALLOW_GIT_PUSH=1 git push origin main'
+_check allow "히어독 커밋 뒤 허락 푸시"           "$(printf "git commit -F - <<'EOF'\nmsg\nEOF\nALLOW_GIT_PUSH=1 git push origin main")"
+_check deny  "예약어 뒤 허락(기존 판정 유지)"             'for r in a b; do ALLOW_GIT_PUSH=1 git -C "$r" push origin main; done'
+
+echo "== G-P 줄 단위 폴백(전체 파싱 실패 — 걷지 않은 히어독 본문의 아포스트로피) =="
+_check allow "아포스트로피 히어독 커밋 + 허락 푸시"   "$(printf "git commit -F - <<'EOF'\nfix: don't break\nEOF\nALLOW_GIT_PUSH=1 git push origin main")"
+_check deny  "폴백: 뒤 줄 무허락 푸시"               "$(printf "git commit -F - <<'EOF'\nfix: don't break\nEOF\nALLOW_GIT_PUSH=1 git push origin main\ngit push origin --delete old")"
+_check deny  "폴백: 푸시 줄 자체가 파싱 실패"         "$(printf "git commit -F - <<'EOF'\nfix: don't break\nEOF\nALLOW_GIT_PUSH=1 git push origin \"main")"
+_check allow "한계 고정: 보이는 푸시가 있으면 래퍼 안은 판정 밖" 'ALLOW_GIT_PUSH=1 git push origin main && bash -c "git push --mirror origin"'
+
+echo "== G-P 관문 실패 주입 — 관문이 실패하면 허락하지 않는다 =="
+_TD=$(mktemp -d)
+sed "s/^  CMD=\"\$1\" python3 -I - <<'PY'\$/  CMD=\"\$1\" python3 -I -c 'raise SystemExit(3)' <<'PY'/" "$HOOK" > "$_TD/inj.sh"
+run=$((run + 1))
+if cmp -s "$HOOK" "$_TD/inj.sh"; then
+  printf 'FAIL  %-58s\n' "주입 지점(gate_allow 의 python3 호출 줄)이 없다"
+else
+  _o=$(_payload 'ALLOW_GIT_PUSH=1 git push origin main' | bash "$_TD/inj.sh" 2>/dev/null)
+  if [ "$(_decision_of "$_o")" = deny ] && [ "$(printf '%s' "$_o" | jq -s length)" = 1 ]; then
+    passed=$((passed + 1)); printf 'ok    %-58s [deny]\n' "관문 python 실패 → deny(JSON 1개)"
+  else
+    printf 'FAIL  %-58s 실제=%s\n' "관문 python 실패 → deny" "$(_decision_of "$_o")"
+  fi
+fi
+
+echo "== HEAD 판과 차등 비교 — HEAD 가 deny 한 입력은 이 판도 deny(약화 0) =="
+_root=$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null)
+if [ -n "$_root" ] && git -C "$_root" show "${BASE_REF:-HEAD}:global/hooks/git-push-guard.sh" > "$_TD/head.sh" 2>/dev/null; then
+  run=$((run + 1)); _weak=0
+  for c in "${CASES[@]}"; do
+    [ "$(_decision_of "$(_payload "$c" | bash "$_TD/head.sh" 2>/dev/null)")" = deny ] || continue
+    [ "$(_decision_of "$(_payload "$c" | bash "$HOOK" 2>/dev/null)")" = deny ] && continue
+    _weak=$((_weak + 1)); printf '      약화: %s\n' "$c"
+  done
+  if [ "$_weak" -eq 0 ]; then passed=$((passed + 1)); printf 'ok    %-58s [%s건 대조]\n' "HEAD deny ⊆ 이 판 deny" "${#CASES[@]}"
+  else printf 'FAIL  %-58s 약화=%s\n' "HEAD deny ⊆ 이 판 deny" "$_weak"; fi
+else
+  echo "(차등 비교 건너뜀 — 킷 git 작업 트리 밖이거나 ${BASE_REF:-HEAD} 에 파일 없음)"
+fi
+rm -rf "$_TD"
 
 echo "== 입력 방어 =="
 _check_raw allow "깨진 JSON"                  'not a json at all'

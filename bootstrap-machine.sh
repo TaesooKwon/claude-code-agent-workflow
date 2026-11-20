@@ -57,11 +57,18 @@ install_file() {  # $1=src(킷) $2=dest  — 토큰치환 후 설치(내용 다�
   # 텍스트만 토큰치환(sed). 바이너리(xlsx·sqlite·이미지 등)는 그대로 복사 — sed 는 non-UTF8 에
   # "illegal byte sequence"로 실패해 자산을 깨뜨린다. grep -I 로 바이너리 판별.
   if grep -Iq . "$src" 2>/dev/null; then subst < "$src" > "$tmp"; else cp "$src" "$tmp"; fi
-  if [ -f "$dst" ] && cmp -s "$tmp" "$dst"; then rm -f "$tmp"; echo "  = 동일  ${dst/#$HOME/~}"; return; fi
+  # 셸 스크립트는 문법 검사 후에만 설치 — 등록된 PreToolUse 훅이 문법 오류면 그 도구 호출이 전부 막힌다(기존 설치본 유지).
+  case "$dst" in *.sh) if ! bash -n "$tmp" 2>/dev/null; then rm -f "$tmp"; echo "  ✗ 문법 오류로 설치 안 함 ${dst/#$HOME/~} (킷 $src 확인 — bash -n)"; return 0; fi ;; esac
+  # 원본이 -x 면 설치본에 -x 를 붙인다(mktemp 사본은 0600 이라 mv 만으로는 -x 가 빠진다) — 내용이 같아도 빠진 -x 는 복구한다.
+  if [ -f "$dst" ] && cmp -s "$tmp" "$dst"; then rm -f "$tmp"; echo "  = 동일  ${dst/#$HOME/~}"
+    if [ "$DRY" = 0 ] && [ -x "$src" ] && [ ! -x "$dst" ]; then chmod +x "$dst" && echo "  ↻ 실행 비트 복구 ${dst/#$HOME/~}" || echo "  ✗ 실행 비트 복구 실패 ${dst/#$HOME/~}"; fi
+    return 0; fi
   if [ "$DRY" = 1 ]; then echo "  [dry] 설치 ${dst/#$HOME/~}"; rm -f "$tmp"; return; fi
   mkdir -p "$(dirname "$dst")"
   [ -f "$dst" ] && cp "$dst" "$dst.bak-$stamp" && echo "  ↻ 백업 ${dst/#$HOME/~}.bak-$stamp"
-  mv "$tmp" "$dst"; echo "  ✓ 설치  ${dst/#$HOME/~}"
+  mv "$tmp" "$dst"
+  if [ -x "$src" ]; then chmod +x "$dst" || echo "  ✗ 실행 비트 설정 실패 ${dst/#$HOME/~}"; fi
+  echo "  ✓ 설치  ${dst/#$HOME/~}"
 }
 
 echo "=== bootstrap-machine → ~/.claude 설치 ${DRY:+(DRY-RUN)} ==="
@@ -82,21 +89,55 @@ install_file "$G/CLAUDE.md" "$DEST/CLAUDE.md"
 # 5-1) 전역 규약 근거 저장소 — README(운용 규칙)만 설치. 근거 파일 본문은 머신마다 쌓이는
 #      개인 자산이라 킷에 담지 않는다(식별자 반출 금지). 상시 로드가 아니라 크기 게이트 대상도 아니다.
 install_file "$G/rules-rationale/README.md" "$DEST/rules-rationale/README.md"
-# 6) settings.json — 없으면 설치. 있으면 hooks.Stop 을 킷 것으로 통째 교체(라이브에만 있는 Stop 원소는 사라진다 — 백업 .bak-<시각>)하고 그 밖(권한/statusline/MCP)은 보존.
-#    Claude Code가 첫 실행 시 settings.json을 선생성하는 흔한 경로에서도 Stop 훅이 반드시 등록되게.
+# 6) settings.json — 없으면 설치. 있으면 병합(기존 파일 = 백업 .bak-<시각> 후 교체):
+#    ① hooks.Stop 을 킷 것으로 통째 교체(라이브에만 있는 Stop 원소는 사라진다).
+#    ② PreToolUse 의 destructive-cmd-ask 등록 보장(운영 DB MCP 확인창 — 없으면 킷 항목 추가, 있으면 matcher 가
+#       킷 것으로 바뀔 수 있다 — 조건은 아래 jq).
+#    ③ 킷 등록 보장 — Stop 밖 이벤트마다 템플릿의 훅이 기존 settings 의 같은 이벤트 어디에도 없으면 그 훅을 템플릿의
+#       matcher 그룹째 뒤에 붙인다(그룹 안 이미 등록된 훅은 뺀다). "있음" = 같은 스크립트 파일명(hnames — hook-obs 래퍼
+#       꼴 command 도 감싼 훅 이름으로 센다). 기존 항목·순서·matcher·사용자 고유 훅은 그대로.
+#    ④ permissions.deny 가 아예 없을 때만 킷 deny 를 넣는다(이미 있는 deny 는 사용자 큐레이션이라 건드리지 않는다).
+#    Claude Code 가 첫 실행 시 settings.json 을 선생성하는 흔한 경로에서도 킷 훅이 등록되게.
+#    기존 파일이 이상 형식(객체가 아님·hooks 가 객체가 아님·이벤트 값이 배열이 아님·그룹이 객체가 아님 등)이면 jq 가
+#    실패하고 기존 파일은 그대로 둔 채 안내만 낸다.
+# ponytail: "있음" 판정은 command 안 '/hooks/<이름>.(sh|py|js|mjs)' 파일명 일치 — 다른 경로의 같은 이름 훅도 있음으로 친다 / 오판이 관측되면 경로까지 비교.
+SETTINGS_JQ_DEFS='def hnames: (.command // "") as $c
+    | ([$c | scan("/hooks/([A-Za-z0-9._-]+\\.(?:sh|py|js|mjs))") | .[0]] - ["hook-obs.sh"]) as $n
+    | if ($n | length) > 0 then $n else [$c] end;
+  def evnames($e): [(.hooks[$e] // [])[] | .hooks[]? | hnames[]] | unique;'
 if [ ! -f "$DEST/settings.json" ]; then
   install_file "$G/settings.json.template" "$DEST/settings.json"
 else  # jq 는 상단 얼리 가드로 보장됨
   tmpl="$(mktemp)"; subst < "$G/settings.json.template" > "$tmpl"
   merged="$(mktemp)"
-  # 기존 전체 보존 + hooks.Stop 을 킷 템플릿 것으로 세팅(다른 hooks 이벤트·권한·statusline·MCP 유지). 백업 후 교체.
-  jq -s '.[0] as $cur | .[1] as $kit | $cur | .hooks = (($cur.hooks // {}) + {Stop: $kit.hooks.Stop})' "$DEST/settings.json" "$tmpl" > "$merged" 2>/dev/null
+  # 형식 검사 → ① → ② → ③ → ④. jq 가 실패해도(set -e) 멈추지 않고 아래 검사가 기존 파일을 지킨다.
+  jq -s "$SETTINGS_JQ_DEFS"'
+         if length != 2 or (.[0] | type) != "object" or ((.[0].hooks // {}) | type) != "object"
+            or any((.[0].hooks // {})[]; type != "array" or any(.[]; type != "object" or ((.hooks // []) | type) != "array"))
+         then error("settings.json 형식이 예상과 다름") else . end
+         | .[0] as $cur | .[1] as $kit | $cur | .hooks = (($cur.hooks // {}) + {Stop: $kit.hooks.Stop})
+         | ($kit.hooks.PreToolUse // [] | map(select(any(.hooks[]?; (.command // "") | test("destructive-cmd-ask\\.sh")))) | .[0]) as $kd
+         | def isd: any(.hooks[]?; (.command // "") | test("destructive-cmd-ask\\.sh"));
+           if $kd == null then .
+           elif any((.hooks.PreToolUse // [])[]; isd) then
+             .hooks.PreToolUse |= map(if isd and (((.matcher // "") | test("__PROJECT__")) or ((.matcher // "") | test("mcp__") | not)) then .matcher = $kd.matcher else . end)
+           else .hooks.PreToolUse = ((.hooks.PreToolUse // []) + [$kd]) end
+         | reduce ($kit.hooks // {} | to_entries[] | select(.key != "Stop") | .key as $e | .value[] | {e: $e, g: .}) as $x (.;
+             evnames($x.e) as $have
+             | ($x.g | .hooks |= map(select(any(hnames[]; IN($have[])) | not))) as $g
+             | if ($g.hooks | length) > 0 then .hooks[$x.e] = ((.hooks[$x.e] // []) + [$g]) else . end)
+         | if (($cur.permissions == null) or ((($cur.permissions | type) == "object") and $cur.permissions.deny == null)) then .permissions = (((.permissions | objects) // {}) + {deny: ($kit.permissions.deny // [])}) else . end' "$DEST/settings.json" "$tmpl" > "$merged" 2>/dev/null || :
   if [ -s "$merged" ] && jq -e . "$merged" >/dev/null 2>&1; then
-    if cmp -s "$merged" "$DEST/settings.json"; then echo "  = 동일  settings.json (hooks.Stop 이미 정합)"
-    elif [ "$DRY" = 1 ]; then echo "  [dry] settings.json hooks.Stop 을 킷 것으로 교체(라이브에만 있는 Stop 원소는 사라진다 — 백업 .bak-<시각>, 그 밖 설정 보존)"
+    # ③ 으로 새로 들어갈 등록(이벤트:파일명) — 안내용
+    adds="$(jq -rs "$SETTINGS_JQ_DEFS"' .[0] as $c | .[1] as $m
+            | [$m.hooks | keys[] | select(. != "Stop") as $e | ($m | evnames($e)) - ($c | evnames($e)) | .[] | select(test("\\.(sh|py|js|mjs)$")) | "\($e):\(.)"]
+            | join(" ")' "$DEST/settings.json" "$merged" 2>/dev/null || :)"
+    what="hooks.Stop 을 킷 것으로 교체(라이브에만 있는 Stop 원소는 사라진다)·킷 훅 등록 추가[${adds:-없음}]·destructive-cmd-ask 등록 보장·deny 없으면 킷 deny 주입·그 밖 설정 보존"
+    if cmp -s "$merged" "$DEST/settings.json"; then echo "  = 동일  settings.json (hooks.Stop·킷 훅 등록·destructive-cmd-ask·deny 이미 정합)"
+    elif [ "$DRY" = 1 ]; then echo "  [dry] settings.json 갱신 예정 — $what (백업 .bak-<시각>)"
     else cp "$DEST/settings.json" "$DEST/settings.json.bak-$stamp"; mv "$merged" "$DEST/settings.json"
-         echo "  ✓ 갱신  settings.json (hooks.Stop 을 킷 것으로 교체 — 라이브에만 있던 Stop 원소는 사라짐·그 밖 설정 보존, 백업 .bak-$stamp)"; fi
-  else echo "  ✗ settings.json 갱신 실패(jq) — 수동 확인 필요(라이브 settings.json 은 그대로)"; fi
+         echo "  ✓ 갱신  settings.json — $what (백업 .bak-$stamp)"; fi
+  else echo "  ✗ settings.json 갱신 실패(jq — 형식이 예상과 다르거나 jq 오류) — 수동 확인 필요(기존 settings.json 은 그대로)"; fi
   rm -f "$tmpl" "$merged" 2>/dev/null
 fi
 

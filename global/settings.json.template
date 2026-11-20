@@ -18,7 +18,6 @@
       "Bash(git fetch*)"
     ],
     "ask": [
-      "mcp____PROJECT__-real-db",
       "Bash(git checkout -- *)",
       "Bash(git checkout .*)",
       "Bash(git checkout -f*)",
@@ -117,11 +116,11 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash|mcp____PROJECT__-real-db__.*",
+        "matcher": "Bash|mcp__.*-[Dd][Bb]__.*",
         "hooks": [
           {
             "type": "command",
-            "command": "__HOME__/.claude/hooks/destructive-cmd-ask.sh",
+            "command": "bash __HOME__/.claude/hooks/destructive-cmd-ask.sh",
             "timeout": 10,
             "statusMessage": "파괴 명령 확인: 워킹트리·운영 DB 호출 ask 검사..."
           }

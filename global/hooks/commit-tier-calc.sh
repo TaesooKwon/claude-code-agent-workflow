@@ -194,10 +194,13 @@ _binding_added() {
 _match_extra() {
   local f="$1" g
   [ -n "$extra_a_globs" ] || return 1
+  # set -f: 값을 낱말로만 나누고 파일명으로 펼치지 않는다(펼치면 훅 cwd 의 실제 파일명이 패턴을 대신한다). 반환 경로마다 set +f.
+  set -f
   for g in $extra_a_globs; do
     # shellcheck disable=SC2254  # 글롭 패턴이므로 의도적 비인용
-    case "$f" in $g) return 0 ;; esac
+    case "$f" in $g) set +f; return 0 ;; esac
   done
+  set +f
   return 1
 }
 
@@ -232,10 +235,12 @@ while IFS= read -r f; do
     auth_hit="${auth_hit}    - ${f}
 "
   elif [ -n "$auth_paths" ]; then
+    set -f   # 낱말 나누기만(파일명 확장 없음 — _match_extra 와 같은 이유)
     for p in $auth_paths; do
       case "$f" in *"$p"*) auth_hit="${auth_hit}    - ${f}
 "; break ;; esac
     done
+    set +f
   fi
   case "$f" in
     *.sql) schema_hit="${schema_hit}    - ${f}
