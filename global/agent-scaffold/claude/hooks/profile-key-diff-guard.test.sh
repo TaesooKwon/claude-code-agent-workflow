@@ -8,7 +8,7 @@
 # ※ 커밋 명령 문자열은 이 파일 안에만 둔다 — Bash 도구 명령줄에 직접 쓰면 그 문자열을 보는 PreToolUse 훅(모집단 = settings.json 의 PreToolUse 등록)이 반응할 수 있다.
 set -u
 
-HOOKS_DIR="{{ROOT}}/.claude/hooks"
+HOOKS_DIR="$(cd "$(dirname "$0")" && pwd)"
 # GUARD 환경변수로 검사 대상 훅을 바꿀 수 있다(변이 반증용 사본).
 GUARD="${GUARD:-$HOOKS_DIR/profile-key-diff-guard.sh}"
 

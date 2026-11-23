@@ -4,9 +4,9 @@
 #   settings 의 permissions.ask 는 auto 모드에서 확인창을 띄우지 않았다(2026-10-10 실측 1회) → 훅이 직접 ask 를 반환한다.
 #   대상: git checkout -- / . / -f · git restore(인덱스만 되돌리는 --staged/-S 단독 외 전부) · git reset --hard/--merge/--keep(위치 무관) ·
 #         git switch -f / --discard-changes · git stash(무인자·push·drop·clear) ·
-#         git clean 강제(-f/--force, -n/--dry-run 이면 통과) · find -delete / -exec·-execdir·-ok·-okdir rm|unlink(-exec 뒤 sudo·env·command 등 래퍼는 벗기고 본다 · 시작 경로가 전부 임시 디렉터리면 제외 — rm 과 같은 규칙, -H/-L·식 위치 -follow·-files0-from 이면 제외 없음. 단 -exec 와 rm 사이에 래퍼가 끼거나 rm 에 {} 밖의 대상이 있으면 추가 관문 G-D1 이 그 rm -r 을 대상 기준으로 다시 봐 임시 시작 경로여도 ask) ·
+#         git clean 강제(-f/--force, -n/--dry-run 이면 통과) · find -delete / -exec·-execdir·-ok·-okdir rm|unlink(-exec 뒤 sudo·env·command 등 래퍼는 벗기고 본다 · 시작 경로가 전부 임시 디렉터리면 제외 — rm 과 같은 규칙, -H/-L·식 위치 -follow·-files0-from 이거나 ~ 로 시작하는 시작 경로가 있으면 제외 없음. 단 -exec 와 rm 사이에 래퍼가 끼거나 rm 에 {} 밖의 대상이 있으면 추가 관문 G-D1 이 그 rm -r 을 대상 기준으로 다시 봐 임시 시작 경로여도 ask) ·
 #         git branch 강제 삭제(-D·-Df·--delete --force·-d -f·긴 옵션 축약 등 순서·묶음 무관 — 병합 안 된 커밋 소실. -d 단독은 병합 안 된 브랜치를 git 이 거부하므로 통과) ·
-#         rm -r/-R(실행어 basename 기준 — /bin/rm 포함. 대상이 전부 임시 디렉터리면 제외, 단 대상에 { * ? [ $ ` 가 있으면 제외 없음) ·
+#         rm -r/-R(실행어 basename 기준 — /bin/rm 포함. 대상이 전부 임시 디렉터리면 제외, 단 대상에 { * ? [ $ ` 가 있거나 ~ 로 시작하는 대상(HOME 이 임시 디렉터리 아래여도)이 있으면 제외 없음) ·
 #         MCP 운영 DB 전 도구(서버명 규칙 — 소문자화해 -db 로 끝나고 개발 DB 접미사(-dev-db·-devserver-db)가 아닌 서버. 아래 MCP 분기 주석).
 #   추가 관문(판정 본문 끝 G-D1~G-D4 — 위 판정이 통과시킨 호출에만, 바뀌는 방향은 통과 → ask): 세그먼트 중간 rm·git·find 재판정
 #     (예약어 do·then·else·{·! 뒤, xargs·timeout·nice·sudo -u 경유, find -exec 뒤 래퍼를 낀 rm -r) · 셸 -c 본문 재판정(find -exec sh -c 포함) ·
@@ -355,7 +355,7 @@ def judge(a):
         targets = [x for x in a[1:] if not x.startswith("-")]
         globish = any(set(t) & GLOBISH for t in targets)
         if targets and not globish and all(
-                os.path.normpath(os.path.join(hcwd, os.path.expanduser(t))).startswith(tmp_roots) for t in targets):
+                not t.startswith("~") and os.path.normpath(os.path.join(hcwd, os.path.expanduser(t))).startswith(tmp_roots) for t in targets):
             return None
         return "rm -r " + " ".join(targets[:3])
     if exe == "find":
@@ -380,7 +380,7 @@ def judge(a):
         if "-delete" not in expr and not rm_exec:
             return None
         if given and not follow and "-follow" not in expr and "-files0-from" not in expr and not any(set(t) & GLOBISH for t in starts) and all(
-                os.path.normpath(os.path.join(hcwd, os.path.expanduser(t))).startswith(tmp_roots) for t in starts):
+                not t.startswith("~") and os.path.normpath(os.path.join(hcwd, os.path.expanduser(t))).startswith(tmp_roots) for t in starts):
             return None
         return "find " + " ".join(starts[:3]) + (" -delete" if "-delete" in expr else " -exec rm")
     if exe != "git": return None

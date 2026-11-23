@@ -13,7 +13,7 @@ jobs:
   hooks:
     # 훅은 macOS 기본 bash 3.2·BSD 도구 기준으로 작성·검증된다.
     runs-on: macos-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
 
@@ -48,8 +48,14 @@ jobs:
           bash -n githooks/pre-push
           bash githooks/pre-push.test.sh
 
-      # 설치 전(킷 원본) 상태에서 도는 훅·스크립트 시험. {{ROOT}} 치환이 필요한 시험(설치된 프로젝트에서만 도는 것)과
-      # 라이브 ~/.claude 를 읽는 시험은 넣지 않는다.
+      # 스캐폴드 훅 시험 전부를 설치된 모양(토큰 치환 사본)으로 — 킷 원본에선 토큰 모양 때문에 판정이 설치본과 갈리는 시험이 있다.
+      - name: Scaffold tests as installed (token-substituted copy)
+        run: bash test-scaffold-substituted.sh
+
+      - name: Kit drift check tests
+        run: H=global/hooks/kit-drift-check.sh bash test-kit-drift-check.sh
+
+      # 설치 전(킷 원본) 상태에서 그대로 도는 훅·스크립트 시험. 라이브 ~/.claude 를 읽는 시험은 넣지 않는다.
       - name: Hook and script unit tests
         run: |
           set -u

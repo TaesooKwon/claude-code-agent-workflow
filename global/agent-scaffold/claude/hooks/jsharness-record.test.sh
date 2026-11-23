@@ -6,8 +6,8 @@
 # .claude/.last-jsharness 는 건드리지 않는다(CLAUDE_PROJECT_DIR 을 샌드박스로 덮어쓴다). 정리는 trap EXIT.
 set -u
 
-# HOOKS_DIR_OVERRIDE = 사본 훅 디렉터리 검증용(기본 = 라이브 경로).
-REC="${HOOKS_DIR_OVERRIDE:-{{ROOT}}/.claude/hooks}/jsharness-record.sh"
+# HOOKS_DIR_OVERRIDE = 사본 훅 디렉터리 검증용(기본 = 이 시험 파일이 있는 디렉터리).
+REC="${HOOKS_DIR_OVERRIDE:-$(cd "$(dirname "$0")" && pwd)}/jsharness-record.sh"
 [ -f "$REC" ] || { echo "선행조건 실패: $REC 없음"; exit 1; }
 command -v jq >/dev/null 2>&1 || { echo "선행조건 실패: jq 없음"; exit 1; }
 

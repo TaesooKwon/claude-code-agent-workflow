@@ -116,29 +116,30 @@ for i in $(seq 1 17); do stage "$r" "f$i.txt" "$i"; done
 assert_eq "M8 staged 17개 → 앞 15개 + 외 2" "1" "$(line_of "$(hook compact "$r")" staged | grep -Ec '^- staged: 17개 — ([^ ]+ ){14}[^ ]+ 외 2$')"
 
 echo "── 기록 파일 ───────────────────────────────────────"
+# 모듈명은 리터럴 — 치환 전 플레이스홀더 토큰은 훅의 모듈 허용 목록에 없어 형식 이상으로 떨어진다.
 r=$(mkrepo 6)
-printf '1792980546 SUCCESS {{MODULE_ADMIN}} 988\n' > "$r/.claude/.last-mvn-test"
+printf '1792980546 SUCCESS app-admin 988\n' > "$r/.claude/.last-mvn-test"
 printf '1792980550 61 0\n' > "$r/.claude/.last-jsharness"
 out=$(hook compact "$r")
-assert_eq "F1 mvn test 구 형식(4필드 = 종료 시각) 기록" "- mvn test: 종료 $(date -r 1792980546 '+%F %T') SUCCESS · 모듈 {{MODULE_ADMIN}} · Tests run 988 · 범위 미상(구 형식 — 커밋 게이트는 막는다)" "$(line_of "$out" "mvn test")"
+assert_eq "F1 mvn test 구 형식(4필드 = 종료 시각) 기록" "- mvn test: 종료 $(date -r 1792980546 '+%F %T') SUCCESS · 모듈 app-admin · Tests run 988 · 범위 미상(구 형식 — 커밋 게이트는 막는다)" "$(line_of "$out" "mvn test")"
 assert_eq "F2 jsharness 기록" "- jsharness: $(date -r 1792980550 '+%F %T') Tests run 61 · Failures 0" "$(line_of "$out" jsharness)"
 
 # 현 형식(5필드 = 시작 시각 + 범위) — mvn-test-record.sh 가 쓰는 줄
-printf '1792980546 SUCCESS {{MODULE_ADMIN}} 988 full\n' > "$r/.claude/.last-mvn-test"
+printf '1792980546 SUCCESS app-admin 988 full\n' > "$r/.claude/.last-mvn-test"
 out=$(hook compact "$r")
-assert_eq "F1b mvn test 5필드 기록 → 시작 시각·범위 표시" "- mvn test: 시작 $(date -r 1792980546 '+%F %T') SUCCESS · 모듈 {{MODULE_ADMIN}} · Tests run 988 · 범위 full" "$(line_of "$out" "mvn test")"
-printf '1792980546 UNKNOWN !{{MODULE_FRONT}} 0 partial\n' > "$r/.claude/.last-mvn-test"
+assert_eq "F1b mvn test 5필드 기록 → 시작 시각·범위 표시" "- mvn test: 시작 $(date -r 1792980546 '+%F %T') SUCCESS · 모듈 app-admin · Tests run 988 · 범위 full" "$(line_of "$out" "mvn test")"
+printf '1792980546 UNKNOWN !app-front 0 partial\n' > "$r/.claude/.last-mvn-test"
 out=$(hook compact "$r")
-assert_eq "F1c UNKNOWN·제외 지정 모듈 5필드 → 표시" "- mvn test: 시작 $(date -r 1792980546 '+%F %T') UNKNOWN · 모듈 !{{MODULE_FRONT}} · Tests run 0 · 범위 partial" "$(line_of "$out" "mvn test")"
-printf '1792980546 SUCCESS {{MODULE_ADMIN}} 988 leak\n' > "$r/.claude/.last-mvn-test"
+assert_eq "F1c UNKNOWN·제외 지정 모듈 5필드 → 표시" "- mvn test: 시작 $(date -r 1792980546 '+%F %T') UNKNOWN · 모듈 !app-front · Tests run 0 · 범위 partial" "$(line_of "$out" "mvn test")"
+printf '1792980546 SUCCESS app-admin 988 leak\n' > "$r/.claude/.last-mvn-test"
 out=$(hook compact "$r")
 assert_eq "F1d 5필드 범위 자리 형식 이상 → 확인 불가·원문 비노출" "- mvn test: 확인 불가(형식 이상)|0" "$(line_of "$out" "mvn test")|$(printf '%s' "$out" | grep -c leak)"
-printf '1792980546 UNKNOWN {{MODULE_ADMIN}} 0\n' > "$r/.claude/.last-mvn-test"
+printf '1792980546 UNKNOWN app-admin 0\n' > "$r/.claude/.last-mvn-test"
 out=$(hook compact "$r")
 assert_eq "F1e 4필드에 UNKNOWN(구 형식에 없던 상태) → 확인 불가" "- mvn test: 확인 불가(형식 이상)" "$(line_of "$out" "mvn test")"
 
 # epoch·status 는 맞고 건수 자리만 어긋난 줄 — 앞부분만 보는 느슨한 검사를 걸러낸다
-printf '1792980546 SUCCESS {{MODULE_ADMIN}} leak\n' > "$r/.claude/.last-mvn-test"
+printf '1792980546 SUCCESS app-admin leak\n' > "$r/.claude/.last-mvn-test"
 printf 'garbage\n' > "$r/.claude/.last-review"
 printf '1792980550 61 leak\n' > "$r/.claude/.last-jsharness"
 out=$(hook compact "$r")

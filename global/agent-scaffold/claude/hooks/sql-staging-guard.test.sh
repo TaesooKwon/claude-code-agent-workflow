@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # sql-staging-guard.sh 회귀 — 새 경로가 생기는 상태(A·C·R)의 .sql 은 차단, 기존 .sql 수정(M)은 통과.
 #   diff.renames 설정(기본·false·copies)마다 같은 판정이어야 한다(copies 설정의 C 상태가 새던 결함의 회귀).
-# 훅 경로 기본값 = 라이브. 사본을 볼 땐 HOOKS_DIR_OVERRIDE=<디렉터리>.
+# 훅 경로 기본값 = 이 시험 파일이 있는 디렉터리. 사본을 볼 땐 HOOKS_DIR_OVERRIDE=<디렉터리>.
 # 임시 레포는 mktemp 아래에서만 만들고 끝에 지운다(현재 레포 인덱스는 건드리지 않는다).
 set -u
-H="${HOOKS_DIR_OVERRIDE:-{{ROOT}}/.claude/hooks}/sql-staging-guard.sh"
+H="${HOOKS_DIR_OVERRIDE:-$(cd "$(dirname "$0")" && pwd)}/sql-staging-guard.sh"
 [ -f "$H" ] || { echo "훅 없음: $H"; exit 2; }
 command -v jq >/dev/null 2>&1 && command -v git >/dev/null 2>&1 || { echo "전제 도구 없음(jq/git) — 테스트를 실행하지 않았다"; exit 2; }
 

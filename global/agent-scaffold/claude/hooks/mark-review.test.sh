@@ -33,7 +33,7 @@ contains() { # contains <haystack> <needle> <설명>
   esac
 }
 
-TMP="$(mktemp -d "${TMPDIR:-/tmp}/mark-review-test.XXXXXX")"
+TMP="$(mktemp -d "${TMPDIR:-/tmp}/mark-review-test.XXXXXX")" || { echo '임시 디렉터리 생성 실패 — 실행하지 않았다'; exit 2; }
 trap 'rm -rf "$TMP"' EXIT
 REPO="$TMP/repo"
 mkdir -p "$REPO"

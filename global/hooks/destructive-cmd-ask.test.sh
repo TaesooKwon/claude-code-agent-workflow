@@ -2,7 +2,7 @@
 # destructive-cmd-ask.sh — 잡아야 할 것(ask)·통과할 것(무출력) 표
 H="${1:-$(dirname "$0")/destructive-cmd-ask.sh}"; pass=0; fail=0
 TD=$(mktemp -d); : > "$TD/cases"   # Bash 로 돈 (cwd, 명령) NUL 구분 — run 은 $(…) 서브셸에서 돌아 배열로는 못 모은다. 아래 HEAD 차등 비교가 다시 돌린다
-run(){ [ "$1" = Bash ] && printf '%s\0%s\0' "${3:-/repo}" "$2" >> "$TD/cases"; jq -n --arg t "$1" --arg c "$2" --arg w "${3:-/repo}" '{tool_name:$t,tool_input:{command:$c},cwd:$w}' | bash "$H"; }
+run(){ [ "$1" = Bash ] && printf '%s\0%s\0' "${3:-/repo}" "$2" >> "$TD/cases"; jq -n --arg t "$1" --arg c "$2" --arg w "${3:-/repo}" '{tool_name:$t,tool_input:{command:$c},cwd:$w}' | HOME="${4:-$HOME}" bash "$H"; }
 one(){ [ "$(printf '%s' "$1" | jq -s length 2>/dev/null)" = 1 ]; }   # 출력 = JSON 1개
 okw(){ o=$(run Bash "$1" "$2"); if [ -z "$o" ]; then pass=$((pass+1)); else fail=$((fail+1)); echo "FAIL(통과 기대, cwd=$2): $1"; fi; }
 ask(){ o=$(run Bash "$1"); if printf '%s' "$o" | grep -q '"permissionDecision": *"ask"' && one "$o"; then pass=$((pass+1)); else fail=$((fail+1)); echo "FAIL(ask 기대): $1"; fi; }
@@ -34,7 +34,7 @@ ask $'git commit -F - <<\'EOF\'\nfix: don\'t break\nEOF\nrm -rf src'
 ask $'cat > a.md <<"E"OF\nx\nEOF\nrm -rf src'; ask $'cat > a.md <<E"OF"\nx\nEOF\nrm -rf src'   # 섞인 인용 구분자 — bash 는 EOF 에서 끝내고 뒤 줄을 실행한다
 ok $'# rm -rf src 는 하지 않는다\nls'; ok 'ls  # 정리 뒤; rm -rf src 는 금지'; ok $'git commit -F - <<\'EOF\'\nfix: don\'t break\nEOF'
 # 드리프트: 인라인 git_strip_heredoc = 킷 lib(전역 훅은 레포 lib 를 source 할 수 없다 — 사본이 갈라지면 층마다 계약이 달라진다)
-_kl="$HOME/.claude/agent-scaffold/claude/hooks/lib/git-cmd.sh"
+_kl="$(dirname "$0")/../agent-scaffold/claude/hooks/lib/git-cmd.sh"
 if [ -f "$_kl" ]; then
   _a=$(sed -n '/^git_strip_heredoc() {/,/^}/p' "$H"); _b=$(sed -n '/^git_strip_heredoc() {/,/^}/p' "$_kl")
   if [ -n "$_a" ] && [ "$_a" = "$_b" ]; then pass=$((pass+1)); else fail=$((fail+1)); echo "FAIL: 인라인 git_strip_heredoc 이 킷 lib 와 다르다"; fi
@@ -93,6 +93,12 @@ ok 'find /tmp/w -exec rm -rf {} +'; ok 'find /tmp/w -execdir rm -r {} \;'; ok 'f
 ask 'find /tmp/w -exec rm -rf src \;'; ask 'find /tmp/w -exec rm -rf {} src +'; ask 'find /tmp/w -exec rm -rf'   # rm 에 {} 밖 대상·종결자 없음 = G-D1 재판정
 ask 'find /tmp/w -exec sudo rm -rf {} +'
 ask 'find . -exec sudo rm {} +'; ask 'find src -exec env X=1 rm {} \;'; ok 'find /tmp/w -exec sudo rm {} +'
+# HOME 이 임시 디렉터리 아래여도 ~ 로 시작하는 대상은 임시 예외를 받지 않는다 · 리터럴 임시 경로는 그대로 통과.
+# TH 는 TD(mktemp) 아래 경로 — 훅은 ~ 전개만 보므로 디렉터리를 만들지 않는다.
+TH="$TD/home"
+askh(){ o=$(run Bash "$1" "" "$TH"); if printf '%s' "$o" | grep -q '"permissionDecision": *"ask"' && one "$o"; then pass=$((pass+1)); else fail=$((fail+1)); echo "FAIL(ask 기대, HOME=임시): $1"; fi; }
+okh(){ o=$(run Bash "$1" "" "$TH"); if [ -z "$o" ]; then pass=$((pass+1)); else fail=$((fail+1)); echo "FAIL(통과 기대, HOME=임시): $1"; fi; }
+askh 'rm -rf ~'; askh 'rm -rf ~/proj'; askh 'find ~/proj -delete'; okh 'rm -rf /tmp/w/x'
 # 관문 실패 주입 — 관문 예외 = 판정 불가 ask, 판정기 비정상 종료 = ask, HEAD 판정의 hit 는 관문 예외로 지워지지 않는다
 sed 's/^def gate_seg(a, depth):$/&\n    raise RuntimeError("inj")/' "$H" > "$TD/g.sh"
 sed 's/^import os, re, shlex$/&\nraise SystemExit(3)/' "$H" > "$TD/x.sh"

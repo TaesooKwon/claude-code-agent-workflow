@@ -8,7 +8,7 @@
 # GATE 환경변수로 검사 대상 훅을 바꿀 수 있다(변이 반증용 사본).
 set -u
 
-HOOKS_DIR="{{ROOT}}/.claude/hooks"
+HOOKS_DIR="$(cd "$(dirname "$0")" && pwd)"
 GATE="${GATE:-$HOOKS_DIR/jsharness-commit-reminder.sh}"
 
 for f in "$GATE" "$(dirname "$GATE")/lib/git-cmd.sh"; do

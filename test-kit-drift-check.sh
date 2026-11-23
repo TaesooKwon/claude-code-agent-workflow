@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# kit-drift-check.sh 반증 테스트(세션 분기 + 전역 층 + 큐 + 레포 절 회귀) — 임시 디렉터리의 가짜 HOME 에서만 돈다(실제 ~/.claude 는 T9 에서 읽기만).
+# kit-drift-check.sh 반증 테스트(세션 분기 + 전역 층 + 큐 + 레포 절 회귀) — 임시 디렉터리의 가짜 HOME 에서만 돈다(실제 ~/.claude 는 H 를 비웠을 때의 훅 경로로만 쓴다).
 unset CLAUDE_CONFIG_DIR KIT_DIR   # 좌석에서 돌려도 좌석 env 를 물려받지 않는다(좌석 케이스는 runx 가 명시로 넣는다)
 H=${H:-$HOME/.claude/hooks/kit-drift-check.sh}; H="$(cd "$(dirname "$H")" && pwd)/$(basename "$H")"   # runx 가 cd 하므로 절대경로로
 KITROOT=$(cd "$(dirname "$0")" && pwd); S=$(mktemp -d)/kdc || { echo '임시 디렉터리 생성 실패 — 실행하지 않았다'; exit 2; }
@@ -126,8 +126,11 @@ d=$(fresh t17d); kp "$d"; printf '#!/usr/bin/python3\n# 판정기 v2 주석만 �
 chk "T17d 주석·shebang 만 다름 → 무출력" empty "$(run "$d")"
 d=$(fresh t17e); kp "$d"; cp "$d/home/.claude/agent-scaffold/claude/hooks/lib/cmdform.py" "$d/proj/.claude/hooks/lib/cmdform.py"; echo 'x = 1' > "$d/proj/.claude/hooks/lib/x.py"
 chk "T17e 레포에만 lib/x.py → 레포에만 있음" "레포에만 있음 1: lib/x.py" "$(run "$d")"
-# T9 실물 사본 — 라이브 전역 규약·근거 문서 사본 + 실제 킷(제외 목록 포함)이면 전역 절이 비어야 한다. 프로젝트 = 이 킷 트리(킷 세션).
-d="$S/t9"; mkdir -p "$d/home/.claude"; cp "$HOME/.claude/CLAUDE.md" "$d/home/.claude/"; cp -R "$HOME/.claude/rules-rationale" "$d/home/.claude/"
+# T9 실물 킷 — 가짜 HOME = 이 킷의 전역 규약·근거 문서 사본 + 제외 목록의 조항 머리·근거 문서 항목(라이브에만 있는 것의 대역)이면
+# 실제 킷(제외 목록 포함) 대조에서 전역 절이 비어야 한다. 프로젝트 = 이 킷 트리(킷 세션).
+d="$S/t9"; mkdir -p "$d/home/.claude"; cp "$KITROOT/global/CLAUDE.md" "$d/home/.claude/"; cp -R "$KITROOT/global/rules-rationale" "$d/home/.claude/"
+grep -E '^- \*\*[^*]+\*\*$' "$KITROOT/kit-drift-exclude.txt" >> "$d/home/.claude/CLAUDE.md"
+grep -E '^rules-rationale/[^/]+\.md$' "$KITROOT/kit-drift-exclude.txt" | while IFS= read -r x; do printf '# 제외 항목 대역\n' > "$d/home/.claude/$x"; done
 chk "T9 실물(제외 반영) → 무출력" empty "$(runx "$d" "$KITROOT" "$KITROOT")"
 chk "T9 전역 층이 실제로 돌았다(마커 = 오늘)" "$(date +%F)" "$(cat "$d/home/.claude/.kit-drift-check-global" 2>/dev/null)"
 

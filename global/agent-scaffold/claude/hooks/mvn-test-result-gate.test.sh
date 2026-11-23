@@ -7,8 +7,8 @@
 # ※ 커밋 명령 문자열은 이 파일 안에만 둔다 — Bash 도구 명령줄에 직접 쓰면 그 문자열을 보는 PreToolUse 훅(모집단 = settings.json 의 PreToolUse 등록)이 반응할 수 있다.
 set -u
 
-# HOOKS_DIR_OVERRIDE = 사본 훅 디렉터리(스테이징 수리본 검증용). 기본값은 실물.
-HOOKS_DIR="${HOOKS_DIR_OVERRIDE:-{{ROOT}}/.claude/hooks}"
+# HOOKS_DIR_OVERRIDE = 사본 훅 디렉터리(스테이징 수리본 검증용). 기본값은 이 시험 파일이 있는 디렉터리.
+HOOKS_DIR="${HOOKS_DIR_OVERRIDE:-$(cd "$(dirname "$0")" && pwd)}"
 GATE="$HOOKS_DIR/mvn-test-result-gate.sh"
 REC="$HOOKS_DIR/mvn-test-record.sh"
 
