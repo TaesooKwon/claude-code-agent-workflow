@@ -38,6 +38,22 @@ physpath(){
   printf '%s/%s' "${d%/}" "$(basename "$p")"
 }
 physdir(){ (cd "$1" 2>/dev/null && pwd -P) || printf '%s' "$1"; }
+# 킷 레포(KIT_DIR, 기본 ~/claude-agent-kit — 원본 체크아웃·그 worktree 모두)의 최상위 CLAUDE.md·global/CLAUDE.md 인가.
+# 킷 판정 = 파일이 든 작업 트리와 킷의 git 공통 디렉터리(pwd -P 정규화)가 같음. 어느 쪽이든 판정이 비면 킷 아님.
+# 킷 쪽은 KIT_DIR 에 .git(원본 = 디렉터리, worktree = 파일)이 있어야 한다 — git 아닌 사본이 상위 git 레포(예: HOME dotfiles)
+# 안에 있으면 git -C 가 상위로 올라가 그 레포 최상위의 CLAUDE.md 가 킷으로 잡힌다.
+# 성공하면 갈래 slug 를 출력한다: 최상위 CLAUDE.md = kit-rule(킷 레포 규약) / global/CLAUDE.md = kit-grule(전역 규약 킷 사본).
+gcommon(){ (unset GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR; g=$(git -C "$1" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) && [ -n "$g" ] && cd "$g" 2>/dev/null && pwd -P); }
+KITD="${KIT_DIR:-$HOME/claude-agent-kit}"   # 킷 운영 파일 존재 판정(아래 kit-grule·큐 안내)에도 쓴다
+kit_rule(){
+  local d top kc s k="$KITD"
+  [ -e "$k/.git" ] || return 1
+  d=$(cd "$(dirname "$1")" 2>/dev/null && pwd -P) || return 1
+  top=$(unset GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR; git -C "$d" rev-parse --show-toplevel 2>/dev/null) && [ -n "$top" ] || return 1
+  top=$(cd "$top" 2>/dev/null && pwd -P) || return 1
+  case "$d/$(basename "$1")" in "$top/CLAUDE.md") s=kit-rule ;; "$top/global/CLAUDE.md") s=kit-grule ;; *) return 1 ;; esac
+  kc=$(gcommon "$k") && [ -n "$kc" ] && [ "$(gcommon "$top")" = "$kc" ] && printf '%s' "$s"
+}
 # classify <경로> <전역 디렉터리> <좌석 디렉터리> → slug·layer 설정(세팅 밖이면 둘 다 빈 값)
 classify(){
   local p="$1" H="$2" TS="$3"
@@ -54,7 +70,7 @@ classify(){
     */.claude/hooks/*)                 layer="레포 훅";       slug=r-hook ;;
     */.claude/skills/*/SKILL.md)       layer="레포 스킬";     slug=r-skill ;;
     */.claude/workflows/*)             layer="레포 워크플로"; slug=r-wf ;;
-    */CLAUDE.md)                       layer="레포 규약";     slug=r-rule ;;
+    */CLAUDE.md) if slug=$(kit_rule "$p"); then layer="킷 규약"; else layer="레포 규약"; slug=r-rule; fi ;;
   esac
 }
 lexfp=$(lexnorm "$fp")
@@ -86,6 +102,14 @@ case "$slug" in
 좌석은 전역 규약(~/.claude/CLAUDE.md)을 로드하지 않고 rules-lite.md(+ lite.json 설정)를 읽는다. ①정책 개정이면 정본(전역·레포 CLAUDE.md)부터 고치고 이 사본을 같은 편집 단위에서 맞춘다 ②좌석 전용 예외(토큰 경제·상시 금지/허용)인지 정본 조항의 사본인지 구분해, 사본이면 정본 문구와 어긋나지 않게 한다 ③상시 로드 분량(경위·수치는 rules-rationale 로). 결과를 사용자에게 한 줄로 보고하라." ;;
   kit) ctx="[세팅 배치 판정] ${layer} 편집: $fp
 킷은 복사 원본이다. 형제 레포에 지금 밀어넣지 마라 — 활성 동일 스택 레포는 다음 착수 세션의 kit-drift-check 가 드리프트를 보고하면 그때 맞춘다(지연 전파). 휴면 레포는 제외. 이 변경이 실은 스택 불문이면 킷이 아니라 전역이 맞는지 다시 판정하라." ;;
+  kit-grule) ctx="[세팅 배치 판정] ${layer} 편집: $fp
+전역 규약의 킷 사본이다 — 짝 = 라이브 ~/.claude/CLAUDE.md 를 같은 편집 단위에서 diff 로 대조하라."
+    # 좌석 사본·라이브 편집 절차 안내는 그 파일이 있는 킷에서만(없는 설치 = 공개 스냅샷 등에선 없는 경로를 안내하지 않는다)
+    [ -d "$KITD/global/modules/team-seat" ] && ctx="${ctx} 좌석 사본(킷 global/modules/team-seat/claude-team/rules-lite.md ↔ 라이브 ~/.claude-team/rules-lite.md)도 같은 단위에서 diff 로 대조하라."
+    [ -f "$KITD/scripts/live-edit.sh" ] && ctx="${ctx} 라이브 반영은 scripts/live-edit.sh begin <파일> → 사본 편집 → commit <파일> 로 한다(절차 정본 = 그 스크립트 머리 주석)."
+    ;;
+  kit-rule) ctx="[세팅 배치 판정] ${layer} 편집: $fp
+킷 레포 규약이다(킷 고유 판정축 — 라이브 짝 없음). 스택 불문 방법론이면 이 파일이 아니라 전역 규약(라이브 ~/.claude/CLAUDE.md ↔ 킷 global/CLAUDE.md) 몫인지 먼저 판정하라." ;;
 esac
 # 팀 좌석은 전역 규약을 로드하지 않고 rules-lite.md 의 사본만 읽는다 — 사본이 옛 규칙을 계속 적용하지 않게 상기.
 [ "$slug" = g-rule ] && ctx="${ctx}
@@ -95,4 +119,13 @@ esac
 ${ctx}"; else out="$ctx"; fi
 done
 [ -n "$out" ] || exit 0
+# 킷 후보 큐 쓰기 안내 — 킷 운영 파일(KIT_DIR 의 scripts/live-edit.sh)이 있는 설치에서만, 걸린 갈래 수와 무관하게 끝에 한 번 붙는다.
+# read 는 앞뒤 공백을 벗기므로 들여쓰기 한 칸은 붙일 때 넣는다.
+if [ -f "$KITD/scripts/live-edit.sh" ]; then
+read -r -d '' QADD <<'Q' || true
+킷 후보 큐: 킷 레포 밖 세션이 라이브(~/.claude·~/.claude-team 아래)를 고쳤거나 킷 반영 후보를 정했으면 큐에 한 줄 남긴다 — 쓰기 = `printf '%s\n' '<한 줄>' >> ~/.claude/kit-candidates.md`(한 줄 = `YYYY-MM-DD | <레포> | <층·경로> | <내용>`, 작은따옴표·개행 금지, Edit·Write 도구 금지).
+Q
+out="${out}
+ ${QADD}"
+fi
 jq -n --arg c "$out" '{hookSpecificOutput:{hookEventName:"PostToolUse",additionalContext:$c}}'

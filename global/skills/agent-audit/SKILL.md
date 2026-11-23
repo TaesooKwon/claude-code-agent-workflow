@@ -25,6 +25,7 @@ bash ~/.claude/skills/agent-audit/scripts/audit.sh --fast     # 킷 doctor·test
 - **킷 미반영 자산:** 이번 감사에서 정착시킨 범용 자산의 킷 반영 여부(반영 시 스크럽·grep 감사 → 킷 반영은 킷 세션 몫: 킷 세션이 아니면 킷 반영 후보로 넘기고 사용자에게 보고 · push 는 사용자 지시).
 - **훅 로그 건강:** `~/.claude/hooks/*.log` tail로 BLOCK/PASS가 실제 찍히는지(죽은 훅 탐지).
 - **저발동 스킬·무발화 훅:** `scripts/skill-usage-report.sh [일수]`(호출 0 스킬) + `hook-obs-report.sh`(「은퇴 후보」 = block·ask·warn 0 이고 정책 강제≠기록·보조) → description 보강·은퇴 **후보로 제시만**(처분은 사용자). 월 1회는 `hook-events-retention.sh` 가 세션 시작에 상기한다. 안전 가드(운영 DB·푸시·시크릿)는 발동 0이어도 제외.
+- **과발동 훅:** `hook-obs-report.sh` 의 발동률 상위 훅을 표본으로 확인 — 좋은 코드·정상 명령에 계속 걸리면 제거·완화 신호다("A rule that fires constantly on good code is the sign to remove it" — mattpocock/skills `docs/engineering/retro.md:39` @5863806, MIT). hook-obs 로그는 명령 원문을 기록하지 않으므로(`hook-obs.sh` 헤더) 표본 판정은 그 시각의 세션 기록·훅 자체 로그로 한다. 후보 제시만(처분은 사용자).
 
 ## 3. 마무리
 

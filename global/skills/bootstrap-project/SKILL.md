@@ -1,6 +1,7 @@
 ---
 name: bootstrap-project
-description: 신규(또는 기존) eGov/Spring Boot 2.7 + Maven 멀티모듈 레포에 Claude Code 에이전트 구성(CLAUDE.md 규약·.claude/settings·훅·harness 런북·git 격리·폐쇄형 학습 루프)을 부트스트랩한다. EXAMPLE_REPO에서 정립한 구성을 동일 스택 새 프로젝트로 이식할 때 사용. 트리거="에이전트 구성 셋업/이식/부트스트랩", "새 프로젝트에 규칙 가져와", "agent scaffold 설치".
+description: 신규(또는 기존) eGov/Spring Boot 2.7 + Maven 멀티모듈 레포에 Claude Code 에이전트 구성(CLAUDE.md 규약·.claude/settings·훅·harness 런북·git 격리·폐쇄형 학습 루프)을 부트스트랩한다. EXAMPLE_REPO에서 정립한 구성을 동일 스택 새 프로젝트로 이식할 때 사용. 사용자가 `/bootstrap-project` 로 직접 호출한다(자동 호출 꺼짐).
+disable-model-invocation: true
 ---
 
 # bootstrap-project — 에이전트 구성 이식 스킬

@@ -17,6 +17,12 @@
 #   ⓔ 프로젝트 확장 축 — `<repo>/.claude/tier.conf` 의 extra_a_globs
 #   축이 하나도 안 걸리면 B 후보.
 #
+# 부가 경고(티어와 무관, A/B 어느 보고문에도 덧붙인다 — 역시 warn 만):
+#   ① 디버그 태그 잔존 — staged diff 의 **추가 라인**에 `[DEBUG-<hex 4자 이상>]` 가 있고 파일이 java/js/jsp/html/xml/properties
+#      (diagnose-bug 스킬의 계측 태그. .md 는 스킬·문서가 태그 예시를 담으므로 제외, 삭제 라인은 정리이므로 제외)
+#   ② one-way 후보 — staged 에 .sql 파일 추가/변경(삭제 제외): DDL·데이터 이관은 커밋 되돌림으로 원복되지 않는다.
+#   둘 다 아래 pathspec·-a 판정 불가 분기에선 계산하지 않는다(그 분기는 인덱스를 보지 않는다 — 아래 「한계」의 pathspec·-a 항목과 같은 미탐).
+#
 # 프로젝트 확장 파일(선택) `<git toplevel>/.claude/tier.conf` — `키=값` 한 줄씩, 그 외 줄은 무시:
 #   extra_a_globs=*/js/develop/*.js */mapper/*.xml      # 공백 구분 셸 글롭(case 매칭: * 는 / 도 먹는다)
 #   auth_paths=comn/filter/ comn/interceptor/ SecurityConfig
@@ -270,9 +276,9 @@ if [ -n "$evidence" ]; then
   if [ "$nfiles" -le 5 ] && [ -z "$auth_hit" ] && [ -z "$schema_hit" ]; then
     small="소형 A 후보: **예**(staged ${nfiles}개 ≤ 5 · 인증/인가·스키마 경로 히트 없음).
   → 남은 조건은 훅이 판정하지 않는다: 상태전이·비동기 배선 무변경 / 로직 단위테스트 커버. 셋 다 충족이면
-    단일 에이전트 델타형 리뷰, 하나라도 미충족이면 풀 A(워크플로)."
+    단일 에이전트 델타형 리뷰, 하나라도 미충족이면 풀 A(엔진 = 레포 규약의 A티어 리뷰)."
   else
-    small="소형 A 후보: **아니오** → 풀 A(워크플로 리뷰). 사유:"
+    small="소형 A 후보: **아니오** → 풀 A(레포 규약의 A티어 리뷰). 사유:"
     [ "$nfiles" -gt 5 ] && small="${small}
   - staged ${nfiles}개 > 5"
     [ -n "$auth_hit" ] && small="${small}
@@ -283,7 +289,7 @@ ${auth_hit}"
 ${schema_hit}"
   fi
 
-  reason="[커밋 티어 계산] staged ${nfiles}개 → **A티어**(실행 의미가 바뀌는 변경 → 워크플로 리뷰).
+  reason="[커밋 티어 계산] staged ${nfiles}개 → **A티어**(실행 의미가 바뀌는 변경 → 레포 규약의 A티어 리뷰 — 엔진은 그 레포 CLAUDE.md).
 걸린 축:
 ${evidence}
 ${small}
@@ -303,6 +309,27 @@ B 로 가려면 **B 판정을 사용자에게 말해야 한다**(침묵 강등 �
 
 ${confline}"
 fi
+
+# ── 부가 경고(헤더 「부가 경고」) ───────────────────────────────────────────────
+debug_hit=""
+# diff 1회(파일마다 부르면 큰 커밋에서 훅 timeout → 티어 안내까지 소실). --no-color: color.diff=always 면 행 머리에 ESC 가 붙어 미탐.
+# '+' 는 문자클래스로(BSD). '+++ b/' 머리로 현재 파일을 따라가며 추가 라인만 본다. rename 은 -M 으로 내용 동일분이 추가로 안 보이게.
+debug_hit=$(git -C "$repo" -c core.quotepath=false diff --cached -M -U0 --no-color --no-ext-diff --src-prefix=a/ --dst-prefix=b/ -- \
+    '*.java' '*.js' '*.jsp' '*.html' '*.xml' '*.properties' 2>/dev/null \
+  | awk '/^[+][+][+] b\// { f = substr($0, 7); next }
+         /^[+]/ && !/^[+][+][+]/ && /\[DEBUG-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]/ && !(f in seen) { seen[f] = 1; print "    - " f }' || true)
+[ -n "$debug_hit" ] && debug_hit="${debug_hit}
+"
+# ponytail: .sql 순수 rename 도 one-way 후보로 경고(파일명=버전인 도구 대비) · 디버그 태그 검사는 확장자 대소문자 구분(A.JS 미탐) / 필요 시 R 제외·icase pathspec
+sql_am=$(git -C "$repo" -c core.quotepath=false diff --cached --name-only -z --diff-filter=AMR 2>/dev/null \
+  | tr '\0' '\n' | grep -iE '\.sql$' || true)
+[ -n "$debug_hit" ] && reason="${reason}
+
+⚠️ 디버그 태그 잔존: 추가 라인에 [DEBUG-…] 가 있다 — 계측 로그를 지우고 커밋하라(diagnose-bug 정리 단계).
+${debug_hit}"
+[ -n "$sql_am" ] && reason="${reason}
+
+⚠️ one-way 후보: DDL·데이터 이관 — 되돌림 경로를 커밋 보고에 적어라(.sql 추가/변경: $(printf '%s' "$sql_am" | tr '\n' ' '))."
 
 jq -n --arg r "$reason" '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:$r}}'
 exit 0

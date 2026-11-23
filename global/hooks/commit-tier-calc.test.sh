@@ -60,6 +60,9 @@ OUT=$(run_ctx "$R" "$COMMIT_CMD")
 assert_has "양성ⓐ .java staged → A티어"            "$OUT" "A티어"
 assert_has "양성ⓐ 축 ⓐ 근거 출력"                   "$OUT" "ⓐ 서버 소스"
 assert_has "양성ⓐ 소형 A 후보 = 예(1파일·인증 아님)" "$OUT" "소형 A 후보: **예**"
+# A티어 안내는 엔진 중립 — 엔진(워크플로·빌트인 대체)은 레포 규약이 고른다
+assert_has     "양성ⓐ A티어 안내 = 레포 규약의 A티어 리뷰(엔진 중립)" "$OUT" "레포 규약의 A티어 리뷰 — 엔진은 그 레포 CLAUDE.md"
+assert_not_has "양성ⓐ A티어 안내에 엔진 고정 문구(워크플로) 없음"   "$OUT" "워크플로"
 
 # ── 양성 ⓑ 매퍼 XML ────────────────────────────────────────────────────────────
 R=$(mkrepo b_mapper)
@@ -351,6 +354,24 @@ if [ "$(_fake_n)" = 1 ]; then ok "r2 펴기: sed 호출 1회(감지)"; else nok 
 _kl="$(cd "$(dirname "$0")" && pwd)/../agent-scaffold/claude/hooks/lib/git-cmd.sh"; [ -f "$_kl" ] || _kl="$HOME/.claude/agent-scaffold/claude/hooks/lib/git-cmd.sh"; _d=$(_unf_drift "$_kl" "$HOOK")
 if [ "$_d" = nolib ]; then echo "  (건너뜀 — 킷 lib 없음: $_kl)"; elif [ "$_d" = same ]; then ok "r2 드리프트: 인라인 펴기 = 킷 lib git_unfold_lines"; else nok "r2 드리프트: 인라인 펴기 ≠ 킷 lib"; fi
 rm -rf "$_fsh"
+
+# ── 2026-11-17 부가 경고: 디버그 태그 잔존 · one-way 후보(.sql) ─────────────────
+DBG='[DEBUG-a4f2]'; DW="디버그 태그 잔존"; OW="one-way 후보"
+R=$(mkrepo dbg_java); mkdir -p "$R/src"; printf 'class A { void f(){ log.debug("%s x"); } }\n' "$DBG" > "$R/src/A.java"; git -C "$R" add -A >/dev/null 2>&1
+OUT=$(run_ctx "$R" "$COMMIT_CMD"); assert_has "태그 양성: .java 추가 라인" "$OUT" "$DW"; assert_has "태그 양성: 파일명 표기" "$OUT" "src/A.java"
+R=$(mkrepo dbg_props); printf 'k=v %s\n' "$DBG" > "$R/app.properties"; git -C "$R" add -A >/dev/null 2>&1
+OUT=$(run_ctx "$R" "$COMMIT_CMD"); assert_has "태그 양성: .properties(B티어 보고문에도 덧붙음)" "$OUT" "$DW"
+R=$(mkrepo dbg_md); printf '예시 %s\n' "$DBG" > "$R/SKILL.md"; git -C "$R" add -A >/dev/null 2>&1
+OUT=$(run_ctx "$R" "$COMMIT_CMD"); assert_not_has "태그 음성: .md 는 예시라 무경고" "$OUT" "$DW"
+R=$(mkrepo dbg_del); mkdir -p "$R/src"; printf 'class A {}\n// %s\n' "$DBG" > "$R/src/A.java"; seed_commit "$R"
+printf 'class A {}\n' > "$R/src/A.java"; git -C "$R" add -A >/dev/null 2>&1
+OUT=$(run_ctx "$R" "$COMMIT_CMD"); assert_not_has "태그 음성: 삭제 라인(정리)은 무경고" "$OUT" "$DW"
+R=$(mkrepo dbg_nohex); mkdir -p "$R/src"; printf '// [DEBUG-zz] [DEBUG-]\n' > "$R/src/B.java"; git -C "$R" add -A >/dev/null 2>&1
+OUT=$(run_ctx "$R" "$COMMIT_CMD"); assert_not_has "태그 음성: hex 4자 미만·비hex" "$OUT" "$DW"; assert_not_has "one-way 음성: .sql 없음" "$OUT" "$OW"
+R=$(mkrepo ow_sql); printf 'ALTER TABLE t ADD c INT;\n' > "$R/ddl.sql"; git -C "$R" add -A >/dev/null 2>&1
+OUT=$(run_ctx "$R" "$COMMIT_CMD"); assert_has "one-way 양성: .sql 추가" "$OUT" "$OW"; assert_has "one-way 양성: 파일명 표기" "$OUT" "ddl.sql"
+R=$(mkrepo ow_del); printf 'select 1;\n' > "$R/old.sql"; echo x > "$R/a.txt"; seed_commit "$R"; git -C "$R" rm -q old.sql >/dev/null 2>&1
+OUT=$(run_ctx "$R" "$COMMIT_CMD"); assert_not_has "one-way 음성: .sql 삭제만" "$OUT" "$OW"
 
 echo
 echo "Tests run: $RUN, Passed: $PASS"

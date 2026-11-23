@@ -48,6 +48,9 @@ _commit "$WT"; rc=$?
 _ok "T1 worktree 커밋 + 마커 없음 → 리뷰 게이트 차단" "$([ $rc = 1 ] && _blocked_by_review; echo $?)" "rc=$rc"
 WT_P=$(cd "$WT" && pwd -P)
 _ok "T4 worktree 거부 안내에 worktree 마커 레시피" "$(printf '%s' "$ERR" | grep -qE "CLAUDE_PROJECT_DIR='($WT|$WT_P)'"; echo $?)" "$(printf '%s' "$ERR" | grep -o 'CLAUDE_PROJECT_DIR=[^ ]*' | head -1)"
+for _m in --begin --builtin --skip-reason; do
+  _ok "T4b worktree 거부 안내의 ${_m} 도 CLAUDE_PROJECT_DIR 전체 호출형" "$(printf '%s' "$ERR" | grep -qE "CLAUDE_PROJECT_DIR='($WT|$WT_P)' bash '[^']+' ${_m}"; echo $?)"
+done
 
 printf 'plain main\n' > "$M/q.txt"; git -C "$M" add q.txt
 CLAUDE_PROJECT_DIR="$M" bash "$MR" --skip-reason test >/dev/null 2>&1

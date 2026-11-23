@@ -44,7 +44,8 @@ usage() {
   4) 재스테이징 : 상대 커밋이 HEAD 에 들어온 뒤 메인에서 같은 경로만 `git add <경로…>`
               (일괄 스테이징 `git add -A/-u/.`·`commit -a` 는 훅 git-add-all-guard.sh 가 차단한다)
   5) 대조   : `git diff --cached | grep -v '^@@'` 를 worktree 의 것과 비교(hunk 헤더는 줄번호가 밀려 다르다)
-  6) 마커   : bash .claude/hooks/mark-review.sh --result <리뷰 결과 JSON>   (또는 --skip-reason "<사유>")
+  6) 마커   : bash .claude/hooks/mark-review.sh --result <리뷰 결과 JSON>   (2)의 워크플로 결과 · 또는 --skip-reason "<사유>")
+              빌트인 Skill(code-review)(대체 엔진)로 리뷰했으면 리뷰 직전 --begin, 리뷰 뒤 --builtin <결과 JSON 파일>(레포 밖 파일)
               ← 커밋과 **별도 Bash 호출**(한 호출이면 구 지문으로 차단). 인자 없는 호출은 찍히지 않는다.
   7) 커밋   : 현재 브랜치에 커밋(푸시는 사용자 전담)
   8) 정리   : git worktree remove --force <worktree경로>

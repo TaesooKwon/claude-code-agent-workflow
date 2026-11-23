@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
-  "_comment": "bootstrap-machine.sh 가 홈경로 등 토큰을 치환해 ~/.claude/settings.json 으로 설치(설치본에선 실경로가 채워짐). statusline/plugins 는 플러그인 고유라 제외(SETUP.md 참조). theme·enabledMcpjsonServers 는 새 머신 재현용으로 포함하되, 회사 프로젝트 식별자는 플레이스홀더로 두고 로컬에서 교체.",
+  "_comment": "bootstrap-machine.sh 가 홈경로 등 토큰을 치환해 ~/.claude/settings.json 으로 설치(설치본에선 실경로가 채워짐). statusline/plugins 는 플러그인 고유라 제외(SETUP.md 참조) — 단 enabledPlugins 의 내장(@builtin) 플러그인 끄기는 플러그인 설치로 재현되지 않아 포함. theme·enabledMcpjsonServers 는 새 머신 재현용으로 포함하되, 회사 프로젝트 식별자는 플레이스홀더로 두고 로컬에서 교체.",
   "env": {
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
@@ -157,6 +157,7 @@
             "type": "command",
             "command": "__HOME__/.claude/hooks/git-push-guard.sh",
             "timeout": 10,
+            "onFailure": "block",
             "statusMessage": "푸시 가드: git push 차단 검사..."
           },
           {
@@ -272,5 +273,8 @@
     "enabled": true,
     "mode": "hold"
   },
-  "voiceEnabled": true
+  "voiceEnabled": true,
+  "enabledPlugins": {
+    "cc-plugin-plugin-authoring@builtin": false
+  }
 }

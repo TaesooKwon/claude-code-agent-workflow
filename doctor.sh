@@ -61,7 +61,7 @@ if [ -n "$node_ref" ]; then [ -x "$node_ref" ] && ok "statusline node 경로 유
 
 echo "=== [5b] settings.json 키 드리프트(라이브 vs 킷 템플릿) ==="
 # 라이브 settings.json 의 top-level 키가 킷 템플릿에 다 있는지 = "새 설정 켰는데 킷에 역반영 안 함" 조기 경보.
-# statusLine·enabledPlugins·extraKnownMarketplaces 는 절대경로/플러그인 고유라 의도적 제외(SETUP §7, 재설치로 재현).
+# statusLine·enabledPlugins·extraKnownMarketplaces 는 절대경로/플러그인 고유라 의도적 제외(SETUP §7, 재설치로 재현 — 템플릿의 enabledPlugins 는 @builtin 끄기만 담는다).
 # autoMode 는 레포 경로가 박힌 레포 전용 허용 규칙이라 의도적 제외.
 TMPL="$KIT_DIR/global/settings.json.template"
 # 킷 제외 훅(kit-drift-exclude.txt 의 hooks/<파일명> 줄) — 등록 집합·역방향 대조에서 뺀다.

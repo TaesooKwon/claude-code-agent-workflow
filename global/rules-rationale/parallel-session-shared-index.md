@@ -25,6 +25,11 @@
      오프셋은 `git apply` 가 흡수) → `git add -A`(worktree 안이라 안전) → 리뷰 호출 안내 출력.
    - worktree 는 **레포 밖**(스크래치패드)에 둔다 — 레포 안(`.claude/worktrees/`)이면 MyBatis 계약검사가 같은 XML 을
      두 번 읽어 `Duplicate mapper namespace` 오탐(실측).
+   - ⚠️ worktree 엔 **git 이 추적하는 파일만** 있다 — gitignored 픽스처·local 설정·자격증명을 읽는 테스트는 그 안에서
+     조용히 skip 되어 초록을 낼 수 있다(원문 "A worktree holds only what git tracks. Tests that read gitignored fixtures,
+     local databases, or credentials can silently skip there." — mattpocock/skills `docs/engineering/implement-spec.md:68`
+     @5863806, MIT). `wt-prereview.sh --with-scaffold` 가 격리 스캐폴드와 `application-local.properties` 를 복사해
+     부분 대응한다 — 그 밖의 ignored 파일에 의존하는 검증은 메인 워킹트리에서 돌리고 `Tests run: N>0` 을 본다.
    - 상대 커밋 감시 = `until [ "$(git rev-parse --short HEAD)" != "<현재>" ]; do sleep 20; done` 을 `run_in_background`
      (10분 상한이라 만료 시 재장전). HEAD 가 바뀌면 메인에서 같은 경로 `git add` → `git diff --cached | grep -v '^@@'`
      를 worktree 것과 대조(hunk 헤더는 줄번호가 밀려 다르니 본문만) → `mark-review.sh` → `git commit`(별도 호출).

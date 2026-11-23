@@ -28,6 +28,10 @@ bash ~/.claude/skills/memory-hygiene/scripts/scan.sh
 | 인덱스 죽은 링크(파일 부재) | — | 라인 제거 |
 | 인덱스 비대 라인 | "열지 판단할 한 줄 훅"을 넘는가 | 본문 요약 인라인 제거, 훅만 남김 |
 | `promotion-candidates` 항목 | 3회째 도달했나 | 도달 시 승격 검토, 처리(승격/폐기) 후 라인 제거 |
+| 결정 기록(설계·선택 이유) | 남길 가치 = ①되돌리기 어렵다 ②맥락 없이 보면 의외다 ③실제 대안 사이에서 고른 결과다 — 셋 다인가 | 셋 다면 유지(evergreen), 하나라도 아니면 history 로 충분하니 병합·삭제 후보 |
+| 날짜 없는 상태 주장("현재 ~", "~이다" 가 코드·설정 상태를 말함) | 언제 사실이었나 | 날짜(또는 커밋)를 붙인다. 상태가 바뀌었으면 옛 문장을 고쳐 쓰지 말고 새 날짜 문장을 추가하고 옛 것에 `(superseded YYYY-MM-DD)` 표시(진행표시 마커·상태 공존은 위 행들대로 치환·소거) |
+
+> 위 두 행의 출처: mattpocock/skills `skills/engineering/domain-modeling/ADR-FORMAT.md:33-35`, `skills/in-progress/chief-of-staff/SKILL.md:44-47` @5863806 (MIT).
 
 ### 2-1. 인계 큐는 복사 전에 재측정
 

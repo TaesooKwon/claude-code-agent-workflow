@@ -31,6 +31,9 @@ hooks/paseo-mcp-guard.test.sh
 hooks/paseo-session-addendum.sh
 hooks/api-mode-reminder.sh
 hooks/api-mode-reminder.test.sh
+# 아래 훅: 특정 레포의 검증 계정 키체인 서비스명에 묶인 비밀번호 조회 차단 — 레포 고유값이라 이식 대상 아님(2026-11-17 드리프트 정리, 사용자 권장안).
+hooks/verify-secret-guard.sh
+hooks/verify-secret-guard.test.sh
 # 아래 skills/ 줄: doctor.sh [5c] 역방향(스킬)에서 뺄 라이브 전용 파일 — 완전일치, '/' 로 끝나면 그 아래 전부(2026-11-06 초안, 사용자 판정 대기).
 #   레포별 회귀 스위트·임시 검증 스크립트·잠금 파일 — 레포 고유값이 들어 있어 이식 대상 아님(2026-09-23 킷 동기화 제외 목록과 같은 사유).
 skills/playwright-verify/suites/

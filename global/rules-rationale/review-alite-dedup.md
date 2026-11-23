@@ -90,3 +90,7 @@ E2E 위임 서브셋 / 착수 전 사전조사 기본 1에이전트(대형 조�
 **비동기검증:17 이동(원문 전문):** "**델타 재리뷰 = 새 단일 에이전트 1개에 1차 지적·수리 주장·수리 diff 를 전사**(워크플로 에이전트는 주소가 없어 `SendMessage` 불가). '수리가 절반인가·새 결함을 만들었나·기각 지적 재상정 금지' 지시." → 템플릿·필수 슬롯은 프로젝트 `.claude/workflows/delta-review.md`.
 
 **비동기검증:18 축약(원문 잔여):** "전량 실행은 사용자 요청 시. 커밋 상비 게이트 = 빌드·단위테스트·자체 리뷰까지. 관련 spec 서브셋은 재량." → 무거운 축 커밋의 회귀 제안은 훅 `commit-regress-reminder.sh` 등록 승격 대기.
+
+## one-way door — 커밋 보고(2026-11-17 추가)
+
+되돌릴 수 없는 변경(DDL·데이터 이관·물리 삭제·외부 발송)이 든 커밋은 보고에 "one-way" 라고 밝히고 되돌림 경로(또는 없음)를 적는다 — 티어(검증 무게)와 별개로 사용자가 어디를 천천히 읽을지 알려 준다. 원문: "Describe whether it's a one-way or two-way door. You can walk back through two-way doors, but not one-way doors. … Changes that involve destructive actions or hard-to-reverse decisions are one-way doors." (출처 mattpocock/skills `skills/engineering/pr/SKILL.md:168` @5863806, MIT). staged `.sql` 처럼 기계로 가려지는 부분은 커밋 훅 warn 확장 대상이고, 외부 발송처럼 의미 판단이 필요한 부분은 이 문장이 근거다.

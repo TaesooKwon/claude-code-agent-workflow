@@ -6,7 +6,8 @@
 #   다른 세션이 아침에 마커를 소진하면 그날 나머지 커밋이 전부 무검문 통과했다
 #   (2026-08-05 실측: 07:54 소진 → 11시 커밋 통과, 리뷰 없이 14파일 커밋).
 #
-# 마커 기록 = `bash .claude/hooks/mark-review.sh --result <리뷰 결과 JSON>`
+# 마커 기록 = `bash .claude/hooks/mark-review.sh --result <리뷰 결과 JSON>`(A티어 기본 엔진 = 워크플로)
+#              또는 `bash .claude/hooks/mark-review.sh --begin` → 빌트인 리뷰 → `bash .claude/hooks/mark-review.sh --builtin <결과 JSON 파일>`(대체 엔진 — 레포 규약이 고를 때)
 #              또는 `bash .claude/hooks/mark-review.sh --skip-reason "<사유>"` (리뷰 수행 직후 에이전트가 실행).
 #   ※ 인자 없는 호출은 더 이상 마커를 찍지 않는다(mark-review.sh 가 fail-closed) — 안내 문구를 바꿀 때
 #     이 주석과 아래 deny 문구를 같이 고칠 것(안내가 죽은 호출형을 가리키면 '시킨 대로 했는데 안 되는' 루프가 된다).
@@ -132,10 +133,10 @@ else
   detail="리뷰 마커가 없습니다."
 fi
 
-reason="[커밋 전 코드리뷰 게이트] ${detail} CLAUDE.md 규약: 스테이징을 확정한 뒤 **자체 리뷰 워크플로 1회**(finder 3~4 다각 → 적대적 verify, 스코프=스테이징 diff 한정·무관 dirty 제외 명시)를 돌리고, CONFIRMED 지적을 수정 → \`git add\` → 델타 재리뷰(템플릿 \`.claude/workflows/delta-review.md\`) → harness·단위테스트 재검증 → 리뷰 결과 JSON 을 파일로 저장한 뒤 \`bash .claude/hooks/mark-review.sh --result <그 JSON 파일>\` 로 마커를 찍고 커밋하세요(사용자 상시 지시라 별도 승인 불필요). **인자 없는 호출은 마커를 찍지 않습니다.** 리뷰 결과는 reviewComplete=true 일 때만 통과로 읽으세요 — confirmed 가 빈 배열이어도 lensStatus 에 status=ok 가 아닌 관점이 있거나(상태값 정본 = .claude/workflows/commit-review.js) uncoveredFiles 가 비어 있지 않으면 리뷰가 완결되지 않은 것이니 마커를 찍지 말고 재실행하세요 — uncoveredFiles 가 있으면 그 파일을 읽는 관점으로(mark-review.sh 가 그 조건을 검문해 거부합니다). 빌트인 code-review 스킬 자체는 호출 금지 — 그 결과가 필요하면 사용자에게 \`/code-review\` 실행을 요청하세요. 사용자가 리뷰 생략을 지시했거나 리뷰가 불필요한 변경(문서·설정만 등)이라면 \`bash .claude/hooks/mark-review.sh --skip-reason \"<사유>\"\` 로 사유를 남기고 진행하되, 그 판단과 사유를 사용자에게 알리세요."
+reason="[커밋 전 코드리뷰 게이트] ${detail} CLAUDE.md 규약: 스테이징을 확정한 뒤 **자체 리뷰 워크플로 1회**(finder 3~4 다각 → 적대적 verify, 스코프=스테이징 diff 한정·무관 dirty 제외 명시)를 돌리고, CONFIRMED 지적을 수정 → \`git add\` → 델타 재리뷰(템플릿 \`.claude/workflows/delta-review.md\`) → harness·단위테스트 재검증 → 리뷰 결과 JSON 을 파일로 저장한 뒤 \`bash .claude/hooks/mark-review.sh --result <그 JSON 파일>\` 로 마커를 찍고 커밋하세요(사용자 상시 지시라 별도 승인 불필요). **인자 없는 호출은 마커를 찍지 않습니다.** 리뷰 결과는 reviewComplete=true 일 때만 통과로 읽으세요 — confirmed 가 빈 배열이어도 lensStatus 에 status=ok 가 아닌 관점이 있거나(상태값 정본 = .claude/workflows/commit-review.js) uncoveredFiles 가 비어 있지 않으면 리뷰가 완결되지 않은 것이니 마커를 찍지 말고 재실행하세요 — uncoveredFiles 가 있으면 그 파일을 읽는 관점으로(mark-review.sh 가 그 조건을 검문해 거부합니다). **대체 엔진 = 빌트인 리뷰**(레포 규약이 고른 경우): \`bash .claude/hooks/mark-review.sh --begin\`(리뷰 대상 지문 기록) → 빌트인 \`Skill(code-review)\` \`high\`(소형 A 는 \`low\`) → 결과 JSON 배열을 레포 밖 임시 파일(TMPDIR 아래 mktemp)에 그대로 저장(빌트인 Result 가 \`(none)\` 이면 \`[]\` 로 옮기고, 그 밖의 배열 아닌 텍스트는 리뷰 실패 → 워크플로로 리뷰 · 결과 원문의 비밀값은 옮겨 적지 않는다) → \`bash .claude/hooks/mark-review.sh --builtin <그 파일>\`(important 0건일 때만 통과 · 판정 뒤 파일 삭제). important 가 나오면 수리 → \`git add\` → \`--begin\` 부터 다시. 빌트인이 important 로 거부한 지문은 --result 로 통과할 수 없습니다. 사용자가 리뷰 생략을 지시했거나 리뷰가 불필요한 변경(문서·설정만 등)이거나 빌트인 important 를 오탐으로 판단했다면 \`bash .claude/hooks/mark-review.sh --skip-reason \"<사유>\"\` 로 사유를 남기고 진행하되, 그 판단과 사유를 사용자에게 알리세요."
 if [ "$_wt_target" -eq 1 ]; then
   _mr="$(cd "$(dirname "$0")" 2>/dev/null && pwd)/mark-review.sh"
-  reason="${reason} [linked worktree 커밋] 이 커밋은 작업트리 ${_gate_repo} 의 인덱스로 검문하고 마커도 ${_gate_repo}/.claude/.last-review 에서 읽습니다 — 마커는 \`CLAUDE_PROJECT_DIR='${_gate_repo}' bash '${_mr}' --result <JSON>\`(또는 --skip-reason \"<사유>\")로 찍으세요."
+  reason="${reason} [linked worktree 커밋] 이 커밋은 작업트리 ${_gate_repo} 의 인덱스로 검문하고 마커도 ${_gate_repo}/.claude/.last-review 에서 읽습니다 — 마커는 \`CLAUDE_PROJECT_DIR='${_gate_repo}' bash '${_mr}' --result <JSON>\`(빌트인 대체 엔진이면 \`CLAUDE_PROJECT_DIR='${_gate_repo}' bash '${_mr}' --begin\` → 리뷰 → \`CLAUDE_PROJECT_DIR='${_gate_repo}' bash '${_mr}' --builtin <결과 JSON 파일>\`, 또는 \`CLAUDE_PROJECT_DIR='${_gate_repo}' bash '${_mr}' --skip-reason \"<사유>\"\`)로 찍으세요."
 fi
 
 jq -n --arg r "$reason" '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"deny",permissionDecisionReason:$r}}'

@@ -148,6 +148,7 @@ vi machine.env
 - **플러그인 클러스터 3키 — `statusLine`·`enabledPlugins`·`extraKnownMarketplaces`**: 라이브 settings.json의 이 3키는 **절대경로가 박혀 있어 그대로 복사하면 새 머신에서 깨진다**(statusLine=nvm node 경로+claude-hud dist 캐시경로, extraKnownMarketplaces=claude-hud github 소스). 그래서 **값 복사가 아니라 플러그인 설치로 재현**한다 — 설치하면 Claude Code가 이 3키를 머신에 맞는 경로로 **자동 기록**한다:
   - `claude-hud`(statusline) — 마켓플레이스 설치 후 `claude-hud:setup` 스킬로 `statusLine.command` 자동 등록. doctor 5절이 node 경로 유효성 검사.
   - `jdtls-lsp`(Java LSP) — §11. `swift-lsp`는 라이브에서 `false`(비활성)라 재현 대상 아님.
+  - 예외 = 내장 플러그인 끄기(`enabledPlugins` 의 `…@builtin: false`, 예: `cc-plugin-plugin-authoring`) — 설치로 재현되지 않아 템플릿에 값으로 둔다. 기존 `settings.json` 병합은 이 키를 건드리지 않으니 설치된 머신엔 손으로 넣는다.
 - **MCP DB 서버** — 회사 dev/운영 DB MCP는 접속정보·시크릿이라 킷에 없음. 템플릿 `enabledMcpjsonServers`엔 `__PROJECT__-dev-db` 플레이스홀더만 있으니 새 환경에서 실제 서버명으로 교체. 운영 DB MCP 는 `enabledMcpjsonServers` 에 넣지 않고(세션 시작 때 승인 질문), **서버명을 `-db` 로 끝나게(개발 DB 는 `-dev-db`·`-devserver-db` — 훅의 개발 접미사 명시 목록) 짓는다** — `destructive-cmd-ask.sh` 가 이름 규칙(소문자화해 `-db` 로 끝나고 개발 접미사가 아니면 ask)으로 확인창을 띄우고, settings matcher `Bash|mcp__.*-[Dd][Bb]__.*` 는 bootstrap 이 보장한다(서버명 교체 작업 없음, 실명은 킷에 넣지 않는다 — doctor [5e] 가 반출 검사). 라이브 `permissions.ask` 에 운영 서버명을 따로 적는 것은 선택(보조 층)이다(접속정보는 각 프로젝트 `.mcp.json`을 `bootstrap-project`로 배선, 비번은 env-var/`machine.env`).
 - **전역 MCP(context7)** — 시크릿 없는 공용 문서조회 MCP. 새 머신에서 한 번 등록: `claude mcp add context7 -- npx -y @upstash/context7-mcp`.
 - **`settings.local.json`(머신 로컬 override)** — 킷 `global/settings.local.json.example` 참고해 `~/.claude/settings.local.json`으로 복사(프로젝트별 임시 허용 등, 커밋 안 됨).

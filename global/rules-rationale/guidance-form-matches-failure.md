@@ -1,6 +1,6 @@
 ---
 name: guidance-form-matches-failure
-description: 전역 「규약 배치·전파」 "지침 문구는 실패 형태에 맞춘다" 조항의 근거 — superpowers writing-skills 대조(2026-11-05) 흡수분.
+description: 전역 「규약 배치·전파」 "지침 문구는 실패 형태에 맞춘다" 조항의 근거 — superpowers writing-skills 대조(2026-11-05)·mattpocock writing-for-agents 가지치기(2026-11-17) 흡수분.
 ---
 
 # 지침 문구는 실패 형태에 맞춘다
@@ -24,6 +24,12 @@ description: 전역 「규약 배치·전파」 "지침 문구는 실패 형태�
 - :150-158 description 실험 — "code review between tasks" 라고 요약하자 에이전트가 본문의 2단계 리뷰 중 1번만 수행, 트리거 조건만 남기자 2단계를 따름.
 - 범위 축소 이유: 원문은 "description = 언제만"을 요구하지만 같은 묶음의 `anthropic-best-practices.md`:185-187 은 "what it does and when to use" — 우리는 Anthropic 권고를 따르고 **순서·횟수 요약만** 금지한다.
 - 대조 = 좌석 조사(교차 더블체크) → 원문 :150-158·:461-476·:580-583 직접 대조(2026-11-05).
+
+## 가지치기(2026-11-17 추가 — 출처 mattpocock/skills `skills/productivity/writing-for-agents/SKILL.md:49,79,82`·`.out-of-scope/new-skills.md:9` @5863806, MIT)
+- **무동작 문장은 문장째 삭제:** 모델이 이미 기본으로 지키는 지시는 부하만 쓴다. 원문 "an instruction the model already obeys by default pays load to say nothing … delete the whole sentence rather than trim words from it." 판정은 모델 기준이라 논쟁이 아니라 실행으로 정한다.
+- **환경을 다시 적은 문서 = 캐시:** 파일·명령 하나로 찾는 사실(설정값·스크립트 목록·디렉터리 구조)은 적지 않는다 — 낡는다. 적는 것은 찾아서는 안 나오는 것(불문율·선택의 이유·설정이 말해 주지 않는 함정). 원문 "Cache what the agent cannot find by looking".
+- **완료 기준이 모호하면 조기 완료:** "이해될 때까지" 같은 경계는 다음 단계로 넘어가는 당김을 못 버틴다 — 경계를 먼저 날카롭게(관측 가능한 조건) 한다. 원문 "A vague bound … invites **premature completion** … sharpen the bound first".
+- **새 스킬 신설 기준:** 기존 스킬 조합이나 기존 스킬에 절을 추가해서 되는 동작이면 새 스킬을 만들지 않는다. 원문 "if you can compose the behaviour from existing skills, it doesn't get a new skill."
 
 ## 적용 메모
 - 우리 규약은 "금지 + 예외" 형태가 많다(11-05 실측) — 소급 재작성하지 않는다. 그 조항을 고칠 일이 생겼을 때 이 표로 형태를 다시 고른다.

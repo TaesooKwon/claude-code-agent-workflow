@@ -47,3 +47,49 @@ jobs:
         run: |
           bash -n githooks/pre-push
           bash githooks/pre-push.test.sh
+
+      # 설치 전(킷 원본) 상태에서 도는 훅·스크립트 시험. {{ROOT}} 치환이 필요한 시험(설치된 프로젝트에서만 도는 것)과
+      # 라이브 ~/.claude 를 읽는 시험은 넣지 않는다.
+      - name: Hook and script unit tests
+        run: |
+          set -u
+          fail=0
+          for t in \
+            global/agent-scaffold/claude/hooks/blocking-heredoc-contract.test.sh \
+            global/agent-scaffold/claude/hooks/code-review-marker-worktree.test.sh \
+            global/agent-scaffold/claude/hooks/commit-gate-form.test.sh \
+            global/agent-scaffold/claude/hooks/git-hook-bypass-guard.test.sh \
+            global/agent-scaffold/claude/hooks/git-hooks-installed-guard.test.sh \
+            global/agent-scaffold/claude/hooks/git/git-hooks.test.sh \
+            global/agent-scaffold/claude/hooks/lib/cmdform.test.sh \
+            global/agent-scaffold/claude/hooks/lib/git-cmd.test.sh \
+            global/agent-scaffold/claude/hooks/mark-review.test.sh \
+            global/agent-scaffold/claude/hooks/prod-db-guard.test.sh \
+            global/agent-scaffold/claude/hooks/secret-commit-guard.test.sh \
+            global/agent-scaffold/claude/hooks/stale-app-verify-guard.test.sh \
+            global/agent-scaffold/claude/hooks/text-constant-3layer-reminder.test.sh \
+            global/hooks/commit-tier-calc.test.sh \
+            global/hooks/delegation-floor-reminder.test.sh \
+            global/hooks/destructive-cmd-ask.test.sh \
+            global/hooks/effort-stage-reminder.test.sh \
+            global/hooks/git-push-guard.test.sh \
+            global/hooks/large-file-split-reminder.test.sh \
+            global/hooks/setting-placement-reminder.test.sh \
+            global/hooks/twin-file-reminder.test.sh \
+            global/hooks/write-overwrite-guard.test.sh \
+            global/skills/agent-audit/scripts/skill-usage-report.test.sh \
+            global/skills/harness/harness.test.sh \
+            test-bootstrap-machine-exec.sh \
+            test-bootstrap-settings-merge.sh \
+            test-doctor-deny.sh \
+            test-doctor-snapshot.sh; do
+            echo "::group::$t"
+            bash "$t" || { echo "FAILED: $t"; fail=1; }
+            echo "::endgroup::"
+          done
+          HOOKOBS_W=global/hooks/hook-obs.sh bash global/hooks/hook-obs.test.sh || { echo "FAILED: hook-obs"; fail=1; }
+          GATE=global/agent-scaffold/claude/hooks/jsharness-commit-reminder.sh \
+            bash global/agent-scaffold/claude/hooks/jsharness-commit-reminder.test.sh || { echo "FAILED: jsharness-commit-reminder"; fail=1; }
+          python3 global/agent-scaffold/claude/scripts/session-grep.test.py || { echo "FAILED: session-grep"; fail=1; }
+          python3 -m unittest discover -s global/skills/harness -p 'test_*.py' || { echo "FAILED: harness unittest"; fail=1; }
+          exit $fail
