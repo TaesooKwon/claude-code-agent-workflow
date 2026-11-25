@@ -90,7 +90,7 @@ eGov-Maven이면 스캐폴드 그대로, 다른 Maven이면 트리밍, Gradle·�
 
 [MIT](LICENSE)
 
-일부 스킬(`global/skills/diagnose-bug`·`global/skills/client-questionnaire`)과 근거 문서의 인용은 외부 MIT 저작물을 개작·인용했다 — 출처·원 라이선스 = [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+일부 스킬(`global/skills/diagnose-bug`·`global/skills/client-questionnaire`·`global/skills/ponytail-audit`)과 근거 문서의 인용은 외부 MIT 저작물을 개작·인용했다 — 출처·원 라이선스 = [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## 더 읽기
 
